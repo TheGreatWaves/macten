@@ -1,0 +1,17 @@
+SYMBOL_TOKEN(LBrace,  "{")
+SYMBOL_TOKEN(RBrace,  "}")
+SYMBOL_TOKEN(LParen,  "(")
+SYMBOL_TOKEN(RParen,  ")")
+SYMBOL_TOKEN(LSqaure, "[")
+SYMBOL_TOKEN(RSquare, "]")
+SYMBOL_TOKEN(Quote,   "'")
+
+SYMBOL_TOKEN(Comma,       ",")
+SYMBOL_TOKEN(Semicolon,   ";")
+SYMBOL_TOKEN(colon,       ":")
+SYMBOL_TOKEN(Dot,         ".")
+SYMBOL_TOKEN(Equal,       "=")
+SYMBOL_TOKEN(Minus,       "-")
+SYMBOL_TOKEN(GreaterThan, ">")
+
+KEYWORD_TOKEN(DeclarativeDefinition, "defmacten_dec")
