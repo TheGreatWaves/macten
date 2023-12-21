@@ -1,3 +1,6 @@
+TOKEN(Raw)
+TOKEN(MacroRule)
+
 SYMBOL_TOKEN(LBrace,  "{")
 SYMBOL_TOKEN(RBrace,  "}")
 SYMBOL_TOKEN(LParen,  "(")
@@ -8,6 +11,7 @@ SYMBOL_TOKEN(Quote,   "'")
 
 SYMBOL_TOKEN(Comma,       ",")
 SYMBOL_TOKEN(Semicolon,   ";")
+SYMBOL_TOKEN(Exclamation, "!")
 SYMBOL_TOKEN(colon,       ":")
 SYMBOL_TOKEN(Dot,         ".")
 SYMBOL_TOKEN(Equal,       "=")

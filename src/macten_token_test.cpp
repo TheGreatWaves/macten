@@ -1,3 +1,5 @@
+#define DEBUG
+
 #include "macten_tokens.hpp"
 
 class MactenParser : public detail::BaseParser<MactenTokenScanner, MactenToken>
@@ -22,6 +24,7 @@ class MactenParser : public detail::BaseParser<MactenTokenScanner, MactenToken>
     while (!match(MactenToken::EndOfFile))
     {
      declaration();
+     std::cout << "Next token: " << current.type.name() << '\n';
     }
 
     return !this->has_error;
@@ -41,11 +44,17 @@ class MactenParser : public detail::BaseParser<MactenTokenScanner, MactenToken>
     // Parse parameters.
     consume(Token::LParen, "Expected '(', found: " + current.lexeme + ".");
 
-    while (!match(Token::RParen))
+    while (!match(Token::RParen) && !match(Token::EndOfFile))
     {
       // Parse each parameter.
       std::cout << current.lexeme << " " << current.type.name() << '\n';
       advance();
+    }
+
+    if (previous.type == Token::EndOfFile)
+    {
+     report_error("Expected ')', parameters list not closed.");
+     return;
     }
 
     // TODO: Extend multi character symbols.
@@ -53,13 +62,17 @@ class MactenParser : public detail::BaseParser<MactenTokenScanner, MactenToken>
     consume(Token::GreaterThan, "Expected '>', found: " + current.lexeme + ".");
 
     consume(Token::LBrace, "Expected '{', found: " + current.lexeme + ".");
-    while (!match(Token::RBrace))
+    while (!match(Token::RBrace) && !match(Token::EndOfFile))
     {
       std::cout << current.lexeme << " " << current.type.name() << '\n';
       advance();
     }
 
-    consume(Token::RBrace, "Expected '}', found: " + current.lexeme + ".");
+    consume(Token::RBrace, "Expected '}', found: " + current.lexeme + ".");  
+   }
+   else
+   {
+    advance();
    }
   }
 };

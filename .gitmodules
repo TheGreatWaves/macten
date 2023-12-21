@@ -1,3 +1,0 @@
-[submodule "external/cpp-token-scanner"]
-	path = external/cpp-token-scanner
-	url = git@github.com:TheGreatWaves/cpp-token-scanner.git
