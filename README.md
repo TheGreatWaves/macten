@@ -36,3 +36,33 @@ macro_rules! add_print {
 }
 ```
 As you can see rust provides a much better support for multi line macros. It's also good to note that rust provides a clear distinction between function calls and macro calls by using the `!` operator (We will also use this design).
+
+A macten declarative marco can be defined using the `defmacten_dec` keyword.
+
+Python example:
+
+```py
+defmacten_dec list {
+    () => {
+        (l := list(),
+         l.append(1),
+         l.append(2),
+         l.append(3),
+         l
+        )[-1]
+    }
+}
+
+if __name__ == "__main__":
+    print(list![])
+```
+Turns into:
+```py
+if __name__ == "__main__":
+    print((l := list(),
+         l.append(1),
+         l.append(2),
+         l.append(3),
+         l
+        )[-1])
+```
