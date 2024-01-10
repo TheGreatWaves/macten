@@ -66,3 +66,22 @@ if __name__ == "__main__":
          l
         )[-1])
 ```
+
+# Advanced Macros
+Inspired by `Nim`, `Lisp` and `Rust`, advanced macros allow you to directly mutate the ast. Of course since `Macten` is generic, language configurations for the parser will have to be user defined.
+
+Advanced macros will work in 3 steps:
+1. An abstract syntax tree (AST) is generated from the macro body according to user defined parser rules and constructs.
+2. The AST is mutated into the form which the user specifies.
+3. The AST is translated back into code and pasted.
+
+The abstract syntax tree can be generated using user defined parsing rules in the form of *images*. Each language could have their own *image* which is basically a description of the layout of different constructs. 
+
+# Parse Rules
+todo
+
+# AST Facility
+todo
+
+# Translation
+todo
