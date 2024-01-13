@@ -78,7 +78,15 @@ Advanced macros will work in 3 steps:
 The abstract syntax tree can be generated using user defined parsing rules in the form of *images*. Each language could have their own *image* which is basically a description of the layout of different constructs. 
 
 # Parse Rules
-todo
+We can take some inspiration from `lex` and `yacc`. The user can define parse rules by defining what an expression looks like.
+
+For example, we could define a variable declaration statement like this:
+```yacc
+type := int
+      | float
+variable := ident
+declaration := type variable ;
+```
 
 # AST Facility
 todo
