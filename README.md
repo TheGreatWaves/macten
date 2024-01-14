@@ -84,12 +84,31 @@ For example, we could define a variable declaration statement like this:
 ```yacc
 type := int
       | float
+      | ident
 variable := ident
-declaration := type variable ;
+declaration := type variable;
+```
+Given:
+```cpp
+int a;
+```
+We can retrive the following AST:
+```
+declaration
+├── type
+│   └── int
+└── variable
+    └── ident
+        └── a
 ```
 
 # AST Facility
-todo
+Now that we have the AST, we can mutate it to reflect what we want.
 
 # Translation
-todo
+We can define syntax generation rules for a given AST node. Let's say that we would like to turn `int a;` to `a: int;`, we can define the following generation rule:
+```cpp
+declaration #= {
+    variable: type;
+}
+```
