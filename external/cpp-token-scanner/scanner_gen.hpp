@@ -23,6 +23,10 @@
  * SOFTWARE.
  */
 
+#ifndef JOIN
+#define JOIN(x, y) x ## y
+#endif
+
 #ifndef TOKEN_DESCRIPTOR_FILE
 #error "TOKEN_DESCRIPTOR_FILE not specified."
 #else
@@ -1355,7 +1359,10 @@ TOKEN(String)
 };
 
 #undef SCANNER
-// #undef JOIN
+#endif
+
+#ifdef JOIN
+#undef JOIN
 #endif
 
 #undef detail
