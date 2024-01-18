@@ -40,9 +40,8 @@
 #include <string_view>
 #include <tuple>
 
-namespace detail 
+namespace detail
 {
-
 namespace cpp20trie
 {
     namespace detail
@@ -754,7 +753,11 @@ DECLARE_RAW_ENUM_CLASS(TOKEN_CLASS_NAME, uint8_t) {
 #ifndef SYMBOL_TOKEN
 #define SYMBOL_TOKEN(name, symbol) TOKEN(name)
 #endif
+#ifndef IGNORE_TOKEN
+#define IGNORE_TOKEN(character)
+#endif
 TOKEN(Error)
+TOKEN(Raw)
 TOKEN(EndOfFile)
 TOKEN(Number)
 TOKEN(Identifier)
@@ -762,6 +765,7 @@ TOKEN(String)
 #include TOKEN_DESCRIPTOR_FILE
 #undef SYMBOL_TOKEN
 #undef KEYWORD_TOKEN
+#undef IGNORE_TOKEN
 #undef TOKEN
 };
 
@@ -784,7 +788,11 @@ public:
 #ifndef SYMBOL_TOKEN
 #define SYMBOL_TOKEN(name, symbol) TOKEN(name)
 #endif
+#ifndef IGNORE_TOKEN
+#define IGNORE_TOKEN(character)
+#endif
 TOKEN(Error)
+TOKEN(Raw)
 TOKEN(EndOfFile)
 TOKEN(Number)
 TOKEN(Identifier)
@@ -792,6 +800,7 @@ TOKEN(String)
 #include TOKEN_DESCRIPTOR_FILE
 #undef SYMBOL_TOKEN
 #undef KEYWORD_TOKEN
+#undef IGNORE_TOKEN
 #undef TOKEN
 };
 
@@ -799,16 +808,17 @@ TOKEN(String)
  * Generate constant definitions.
  */
 #define TOKEN(name) ENUM_CONSTANT_DEFINITION_ENUMERATOR(TOKEN_CLASS_NAME, name)
-#ifndef TOKEN
-#define TOKEN(name)
-#endif
 #ifndef KEYWORD_TOKEN
 #define KEYWORD_TOKEN(name, keyword) TOKEN(name)
 #endif
 #ifndef SYMBOL_TOKEN
 #define SYMBOL_TOKEN(name, symbol) TOKEN(name)
 #endif
+#ifndef IGNORE_TOKEN
+#define IGNORE_TOKEN(character)
+#endif
 TOKEN(Error)
+TOKEN(Raw)
 TOKEN(EndOfFile)
 TOKEN(Number)
 TOKEN(Identifier)
@@ -816,6 +826,7 @@ TOKEN(String)
 #include TOKEN_DESCRIPTOR_FILE
 #undef SYMBOL_TOKEN
 #undef KEYWORD_TOKEN
+#undef IGNORE_TOKEN
 #undef TOKEN
 
 /**
@@ -832,7 +843,11 @@ DEFINE_ENUM_CLASS_NAMES(TOKEN_CLASS_NAME) = {
 #ifndef SYMBOL_TOKEN
 #define SYMBOL_TOKEN(name, symbol) TOKEN(name)
 #endif
+#ifndef IGNORE_TOKEN
+#define IGNORE_TOKEN(character)
+#endif
 TOKEN(Error)
+TOKEN(Raw)
 TOKEN(EndOfFile)
 TOKEN(Number)
 TOKEN(Identifier)
@@ -840,6 +855,7 @@ TOKEN(String)
 #include TOKEN_DESCRIPTOR_FILE
 #undef SYMBOL_TOKEN
 #undef KEYWORD_TOKEN
+#undef IGNORE_TOKEN
 #undef TOKEN
 };
 
@@ -851,7 +867,7 @@ TOKEN(String)
 
 // Marking keywords.
 ALL_KEYWORD_TOKENS_DEFINITION(TOKEN_CLASS_NAME) = {
- #define KEYWORD_TOKEN(name, symbol) TOKEN_ENUM_VALUE(TOKEN_CLASS_NAME, name)
+#define KEYWORD_TOKEN(name, symbol) TOKEN_ENUM_VALUE(TOKEN_CLASS_NAME, name)
 #ifndef TOKEN
 #define TOKEN(name)
 #endif
@@ -861,7 +877,11 @@ ALL_KEYWORD_TOKENS_DEFINITION(TOKEN_CLASS_NAME) = {
 #ifndef SYMBOL_TOKEN
 #define SYMBOL_TOKEN(name, symbol) TOKEN(name)
 #endif
+#ifndef IGNORE_TOKEN
+#define IGNORE_TOKEN(character) TOKEN(character)
+#endif
 TOKEN(Error)
+TOKEN(Raw)
 TOKEN(EndOfFile)
 TOKEN(Number)
 TOKEN(Identifier)
@@ -869,6 +889,7 @@ TOKEN(String)
 #include TOKEN_DESCRIPTOR_FILE
 #undef SYMBOL_TOKEN
 #undef KEYWORD_TOKEN
+#undef IGNORE_TOKEN
 #undef TOKEN
 };
 
@@ -884,7 +905,11 @@ ALL_TOKENS_DEFINITION(TOKEN_CLASS_NAME) = {
 #ifndef SYMBOL_TOKEN
 #define SYMBOL_TOKEN(name, symbol) TOKEN(name)
 #endif
+#ifndef IGNORE_TOKEN
+#define IGNORE_TOKEN(character)
+#endif
 TOKEN(Error)
+TOKEN(Raw)
 TOKEN(EndOfFile)
 TOKEN(Number)
 TOKEN(Identifier)
@@ -892,6 +917,7 @@ TOKEN(String)
 #include TOKEN_DESCRIPTOR_FILE
 #undef SYMBOL_TOKEN
 #undef KEYWORD_TOKEN
+#undef IGNORE_TOKEN
 #undef TOKEN
 };
 
@@ -908,7 +934,11 @@ KEYWORD_MARKER_DEFINITION(TOKEN_CLASS_NAME) = {
 #ifndef SYMBOL_TOKEN
 #define SYMBOL_TOKEN(name, symbol) TOKEN(name)
 #endif
+#ifndef IGNORE_TOKEN
+#define IGNORE_TOKEN(character) TOKEN(character)
+#endif
 TOKEN(Error)
+TOKEN(Raw)
 TOKEN(EndOfFile)
 TOKEN(Number)
 TOKEN(Identifier)
@@ -916,6 +946,7 @@ TOKEN(String)
 #include TOKEN_DESCRIPTOR_FILE
 #undef SYMBOL_TOKEN
 #undef KEYWORD_TOKEN
+#undef IGNORE_TOKEN
 #undef TOKEN
 };
 
@@ -932,7 +963,11 @@ SYMBOL_MARKER_DEFINITION(TOKEN_CLASS_NAME) = {
 #ifndef SYMBOL_TOKEN
 #define SYMBOL_TOKEN(name, symbol) TOKEN(name)
 #endif
+#ifndef IGNORE_TOKEN
+#define IGNORE_TOKEN(character) TOKEN(character)
+#endif
 TOKEN(Error)
+TOKEN(Raw)
 TOKEN(EndOfFile)
 TOKEN(Number)
 TOKEN(Identifier)
@@ -940,6 +975,7 @@ TOKEN(String)
 #include TOKEN_DESCRIPTOR_FILE
 #undef SYMBOL_TOKEN
 #undef KEYWORD_TOKEN
+#undef IGNORE_TOKEN
 #undef TOKEN
 };
 
@@ -957,7 +993,11 @@ SYMBOL_STRING_DEFINITION(TOKEN_CLASS_NAME) = {
 #ifndef SYMBOL_TOKEN
 #define SYMBOL_TOKEN(name, symbol) TOKEN(name)
 #endif
+#ifndef IGNORE_TOKEN
+#define IGNORE_TOKEN(character) TOKEN(character)
+#endif
 TOKEN(Error)
+TOKEN(Raw)
 TOKEN(EndOfFile)
 TOKEN(Number)
 TOKEN(Identifier)
@@ -965,6 +1005,7 @@ TOKEN(String)
 #include TOKEN_DESCRIPTOR_FILE
 #undef SYMBOL_TOKEN
 #undef KEYWORD_TOKEN
+#undef IGNORE_TOKEN
 #undef TOKEN
 };
 
@@ -1031,11 +1072,6 @@ struct SCANNER(TOKEN_CLASS_NAME)
     [[nodiscard]] detail::Token<TOKEN_CLASS_NAME> scan_identifier() noexcept
     {
         while (std::isalnum(peek()) || peek()=='_') advance_position();
-        if (peek()=='!')
-        {
-          ++current;
-          return make_token(TOKEN_CLASS_NAME::MacroRule);
-        }
         return make_token(identifier_type());
     }
 
@@ -1079,7 +1115,11 @@ struct SCANNER(TOKEN_CLASS_NAME)
 #ifndef SYMBOL_TOKEN
 #define SYMBOL_TOKEN(name, symbol) TOKEN(name)
 #endif
+#ifndef IGNORE_TOKEN
+#define IGNORE_TOKEN(character) TOKEN(character)
+#endif
 TOKEN(Error)
+TOKEN(Raw)
 TOKEN(EndOfFile)
 TOKEN(Number)
 TOKEN(Identifier)
@@ -1087,8 +1127,42 @@ TOKEN(String)
 #include TOKEN_DESCRIPTOR_FILE
 #undef SYMBOL_TOKEN
 #undef KEYWORD_TOKEN
+#undef IGNORE_TOKEN
 #undef TOKEN
         ENDMATCH;
+    }
+
+    [[nodiscard]] detail::Token<TOKEN_CLASS_NAME> scan_until_character(char token) noexcept
+    {
+        while (peek()!=token) advance_position();
+        return make_token(TOKEN_CLASS_NAME::Raw);
+    }
+
+    [[nodiscard]] detail::Token<TOKEN_CLASS_NAME> scan_until_token(TOKEN_CLASS_NAME token) noexcept
+    {
+        const auto start_pos = current;
+        detail::Token<TOKEN_CLASS_NAME> tok;
+        while (!is_at_end() && ((tok = scan_token()).type != token)) {/* do nothing */}
+        start = start_pos;
+        current -= tok.lexeme.size();
+        return make_token(TOKEN_CLASS_NAME::Raw);
+    }
+
+    [[nodiscard]] detail::Token<TOKEN_CLASS_NAME> scan_body(TOKEN_CLASS_NAME head, TOKEN_CLASS_NAME tail) noexcept
+    {
+        const auto start_pos = current;
+        detail::Token<TOKEN_CLASS_NAME> tok;
+
+        int scope_count = 1;
+        while (scope_count != 0 && !is_at_end())
+        {
+           tok = scan_token();
+           scope_count += (tok.type == head) ? 1 : 0;
+           scope_count -= (tok.type == tail) ? 1 : 0;
+        }
+        start = start_pos;
+        current -= tok.lexeme.size();
+        return make_token(TOKEN_CLASS_NAME::Raw);
     }
 
     /**
@@ -1110,7 +1184,7 @@ TOKEN(String)
         {
             return scan_number();
         }
-        else if (std::isalpha(c) || c=='_') 
+        else if (std::isalpha(c)) 
         {
             return scan_identifier();
         }
@@ -1129,7 +1203,11 @@ TOKEN(String)
 #ifndef SYMBOL_TOKEN
 #define SYMBOL_TOKEN(name, symbol) TOKEN(name)
 #endif
+#ifndef IGNORE_TOKEN
+#define IGNORE_TOKEN(character) TOKEN(character)
+#endif
 TOKEN(Error)
+TOKEN(Raw)
 TOKEN(EndOfFile)
 TOKEN(Number)
 TOKEN(Identifier)
@@ -1137,11 +1215,12 @@ TOKEN(String)
 #include TOKEN_DESCRIPTOR_FILE
 #undef SYMBOL_TOKEN
 #undef KEYWORD_TOKEN
+#undef IGNORE_TOKEN
 #undef TOKEN
         }
         #undef CCASE
 
-        return make_token(TOKEN_CLASS_NAME::Raw);
+        return error_token("Unexpected character.");
     }
 
     /**
@@ -1211,13 +1290,23 @@ TOKEN(String)
         {
             switch (peek())
             {
-                break; case '\n':
-                {
-                    ++line;
-                }
-                       case '\r':
-                       case '\t':
-                       case ' ':
+#ifndef TOKEN
+#define TOKEN(name)
+#endif
+#ifndef KEYWORD_TOKEN
+#define KEYWORD_TOKEN(name, keyword) TOKEN(name)
+#endif
+#ifndef SYMBOL_TOKEN
+#define SYMBOL_TOKEN(name, symbol) TOKEN(name)
+#endif
+#ifndef IGNORE_TOKEN
+#define IGNORE_TOKEN(character) case character[0]:
+#endif
+#include TOKEN_DESCRIPTOR_FILE
+#undef SYMBOL_TOKEN
+#undef KEYWORD_TOKEN
+#undef IGNORE_TOKEN
+#undef TOKEN
                 {
                     advance_position();
                 }
@@ -1246,6 +1335,7 @@ TOKEN(String)
     [[nodiscard]] detail::Token<TOKEN_CLASS_NAME> make_token(const TOKEN_CLASS_NAME type) noexcept 
     {
         const std::size_t length = current - start;
+        const auto what = this->source_code.substr(start, length);
         return detail::Token(type, this->source_code.substr(start, length), this->line);
     }
 
@@ -1265,8 +1355,9 @@ TOKEN(String)
 };
 
 #undef SCANNER
-#undef JOIN
+// #undef JOIN
 #endif
 
+#undef detail
 #undef TOKEN_DESCRIPTOR_FILE
 #undef TOKEN_CLASS_NAME

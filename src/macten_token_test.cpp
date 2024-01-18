@@ -1,6 +1,7 @@
 #define DEBUG
 
 #include "macten_tokens.hpp"
+#include "macten_all_tokens.hpp"
 
 class MactenParser : public detail::BaseParser<MactenTokenScanner, MactenToken>
 {
@@ -24,7 +25,6 @@ class MactenParser : public detail::BaseParser<MactenTokenScanner, MactenToken>
     while (!match(MactenToken::EndOfFile))
     {
      declaration();
-     std::cout << "Next token: " << current.type.name() << '\n';
     }
 
     return !this->has_error;
@@ -35,40 +35,31 @@ class MactenParser : public detail::BaseParser<MactenTokenScanner, MactenToken>
   {
    if (match(Token::DeclarativeDefinition))
    {
-    consume(MactenToken::Identifier, "Expected macro name, found: " + current.lexeme + ".");
+    consume(MactenToken::Identifier, "Expected macro name, found: " + previous.lexeme + ".");
     const auto macro_name = previous.lexeme;
 
-    // Parse the body.
-    consume(Token::LBrace, "Expected '{', found: " + current.lexeme + ".");
+    consume(Token::LBrace, "Expected macro body, missing '{', found: '" + previous.lexeme + "'.");
 
-    // Parse parameters.
-    consume(Token::LParen, "Expected '(', found: " + current.lexeme + ".");
+    // Parse arguments.
+    consume(Token::LParen, "Expected arguments, missing '(', found: '" + previous.lexeme + "'.");
 
-    while (!match(Token::RParen) && !match(Token::EndOfFile))
+    while(!match(Token::RParen))
     {
-      // Parse each parameter.
-      std::cout << current.lexeme << " " << current.type.name() << '\n';
-      advance();
+     const auto argname = current.lexeme;
+     log("Argname: " + argname);
+     advance();
     }
 
-    if (previous.type == Token::EndOfFile)
-    {
-     report_error("Expected ')', parameters list not closed.");
-     return;
-    }
+    consume(Token::Equal, "Expected '='");
+    consume(Token::GreaterThan, "Expected '>'");
+    consume(Token::LBrace, "Expected macro expansion body, missing  '{'.");
 
-    // TODO: Extend multi character symbols.
-    consume(Token::Equal, "Expected '=', found: " + current.lexeme + ".");
-    consume(Token::GreaterThan, "Expected '>', found: " + current.lexeme + ".");
+    current = this->scanner.scan_body(Token::LBrace, Token::RBrace);
+    std::cout << "Macro body: \n" << current.lexeme << '\n';
 
-    consume(Token::LBrace, "Expected '{', found: " + current.lexeme + ".");
-    while (!match(Token::RBrace) && !match(Token::EndOfFile))
-    {
-      std::cout << current.lexeme << " " << current.type.name() << '\n';
-      advance();
-    }
+    advance();
 
-    consume(Token::RBrace, "Expected '}', found: " + current.lexeme + ".");  
+    consume(Token::RBrace, "Expected '}' the end of macro body, found: " + previous.lexeme);
    }
    else
    {
