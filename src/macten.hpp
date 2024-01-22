@@ -10,9 +10,23 @@
  */
 struct DeclarativeTemplate
 {
- const std::string           m_name;
- std::vector<MactenAllToken> m_token_stream;
-};
+ explicit DeclarativeTemplate(std::string_view name, const std::string& body)
+ : m_name(name)
+ {
+  MactenAllTokenScanner scanner;
+  scanner.set_source(body);
 
+  while (!scanner.is_at_end())
+  {
+   m_token_stream.push_back(scanner.scan_token());
+  }
+ }
+
+ /**
+  * Members.
+  */
+ const std::string                          m_name;
+ std::vector<detail::Token<MactenAllToken>> m_token_stream;
+};
 
 #endif /* MACTEN_H */

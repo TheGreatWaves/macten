@@ -1,7 +1,7 @@
 #define DEBUG
 
 #include "macten_tokens.hpp"
-#include "macten_all_tokens.hpp"
+#include "macten.hpp"
 
 class MactenParser : public detail::BaseParser<MactenTokenScanner, MactenToken>
 {
@@ -36,7 +36,7 @@ class MactenParser : public detail::BaseParser<MactenTokenScanner, MactenToken>
    if (match(Token::DeclarativeDefinition))
    {
     consume(MactenToken::Identifier, "Expected macro name, found: " + previous.lexeme + ".");
-    const auto macro_name = previous.lexeme;
+    const auto& macro_name = previous.lexeme;
 
     consume(Token::LBrace, "Expected macro body, missing '{', found: '" + previous.lexeme + "'.");
 
@@ -55,9 +55,11 @@ class MactenParser : public detail::BaseParser<MactenTokenScanner, MactenToken>
     consume(Token::LBrace, "Expected macro expansion body, missing  '{'.");
 
     current = this->scanner.scan_body(Token::LBrace, Token::RBrace);
-    std::cout << "Macro body: \n" << current.lexeme << '\n';
+    const auto& macro_body = current.lexeme;
 
     advance();
+
+    DeclarativeTemplate macro(macro_name, macro_body);
 
     consume(Token::RBrace, "Expected '}' the end of macro body, found: " + previous.lexeme);
    }

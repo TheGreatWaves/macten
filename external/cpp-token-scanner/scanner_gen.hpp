@@ -1304,16 +1304,13 @@ TOKEN(String)
 #define SYMBOL_TOKEN(name, symbol) TOKEN(name)
 #endif
 #ifndef IGNORE_TOKEN
-#define IGNORE_TOKEN(character) case character[0]:
+#define IGNORE_TOKEN(character) break; case character[0]: { advance_position(); }
 #endif
 #include TOKEN_DESCRIPTOR_FILE
 #undef SYMBOL_TOKEN
 #undef KEYWORD_TOKEN
 #undef IGNORE_TOKEN
 #undef TOKEN
-                {
-                    advance_position();
-                }
                 break; case '/':
                 {
                     if (peek(1) == '/')

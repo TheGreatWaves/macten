@@ -30,7 +30,6 @@ struct Writer
   std::ifstream infile;
   infile.open(m_path, std::ifstream::in);
 
-
   if (infile.good())
   {
    std::ofstream outfile("test.txt");
