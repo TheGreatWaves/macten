@@ -24,3 +24,8 @@ SYMBOL_TOKEN(GreaterThan, ">")
 SYMBOL_TOKEN(LessThan,    "<")
 SYMBOL_TOKEN(Question,    "?")
 SYMBOL_TOKEN(SQuote,      "'")
+SYMBOL_TOKEN(Space,       " ")
+SYMBOL_TOKEN(Newline,     "\n")
+SYMBOL_TOKEN(Tab,         "\t")
+
+KEYWORD_TOKEN(DeclarativeDefinition, "defmacten_dec")
