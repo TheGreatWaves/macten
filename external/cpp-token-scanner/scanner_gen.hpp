@@ -1235,6 +1235,51 @@ TOKEN(String)
     {
         return current >= this->source_code.length();
     }
+    
+    /**
+     * Consume all whitespace.
+     */
+    void skip_whitespace() noexcept
+    {
+        while (true)
+        {
+            switch (peek())
+            {
+#ifndef TOKEN
+#define TOKEN(name)
+#endif
+#ifndef KEYWORD_TOKEN
+#define KEYWORD_TOKEN(name, keyword) TOKEN(name)
+#endif
+#ifndef SYMBOL_TOKEN
+#define SYMBOL_TOKEN(name, symbol) TOKEN(name)
+#endif
+#ifndef IGNORE_TOKEN
+#define IGNORE_TOKEN(character) break; case character[0]: { advance_position(); }
+#endif
+#include TOKEN_DESCRIPTOR_FILE
+#undef SYMBOL_TOKEN
+#undef KEYWORD_TOKEN
+#undef IGNORE_TOKEN
+#undef TOKEN
+                break; case '/':
+                {
+                    if (peek(1) == '/')
+                    {
+                        while(!is_at_end() && peek() != '\n')
+                        {
+                            advance_position();
+                        }
+                    }
+                    else
+                    {
+                        return;
+                    }
+                }
+                break; default: { return; }
+            }
+        }
+    }
 
   private:
     /**
@@ -1285,50 +1330,6 @@ TOKEN(String)
         return true;
     }
 
-    /**
-     * Consume all whitespace.
-     */
-    void skip_whitespace() noexcept
-    {
-        while (true)
-        {
-            switch (peek())
-            {
-#ifndef TOKEN
-#define TOKEN(name)
-#endif
-#ifndef KEYWORD_TOKEN
-#define KEYWORD_TOKEN(name, keyword) TOKEN(name)
-#endif
-#ifndef SYMBOL_TOKEN
-#define SYMBOL_TOKEN(name, symbol) TOKEN(name)
-#endif
-#ifndef IGNORE_TOKEN
-#define IGNORE_TOKEN(character) break; case character[0]: { advance_position(); }
-#endif
-#include TOKEN_DESCRIPTOR_FILE
-#undef SYMBOL_TOKEN
-#undef KEYWORD_TOKEN
-#undef IGNORE_TOKEN
-#undef TOKEN
-                break; case '/':
-                {
-                    if (peek(1) == '/')
-                    {
-                        while(!is_at_end() && peek() != '\n')
-                        {
-                            advance_position();
-                        }
-                    }
-                    else
-                    {
-                        return;
-                    }
-                }
-                break; default: { return; }
-            }
-        }
-    }
 
     /**
      * Create a token with the current string slice.
