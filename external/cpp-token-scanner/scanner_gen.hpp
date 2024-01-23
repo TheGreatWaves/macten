@@ -44,7 +44,7 @@
 #include <string_view>
 #include <tuple>
 
-namespace detail
+namespace cpp20scanner
 {
 namespace cpp20trie
 {
@@ -339,8 +339,8 @@ namespace cpp20trie
         );
     }
 
-    #define MATCH(str) detail::cpp20trie::do_trie(str, [&] {
-    #define CASE(str) }, detail::cpp20trie::FixedString<str>(), [&] {
+    #define MATCH(str) cpp20scanner::cpp20trie::do_trie(str, [&] {
+    #define CASE(str) }, cpp20scanner::cpp20trie::FixedString<str>(), [&] {
     #define ENDMATCH });
 
 } // namespace cpp20trie
@@ -399,7 +399,7 @@ inline constexpr std::string_view _private::JOIN(enum_class_name, Names)[]
  * The base class for Enums.
  */
 #define ENUM_BASE(enum_class_name) \
- detail::EnumBase<enum_class_name, _private::JOIN(enum_class_name, Raw), _private::JOIN(enum_class_name, Names)>
+ cpp20scanner::EnumBase<enum_class_name, _private::JOIN(enum_class_name, Raw), _private::JOIN(enum_class_name, Names)>
 
 // The TokenBase class is simply a wrapper class for a enum type.
 // It utilizes X-macros for ease of extension.
@@ -455,7 +455,7 @@ class EnumBase
  * Tokens super class.
  */
 #define TOKEN_BASE(enum_class_name) \
-ENUM_BASE(enum_class_name), public detail::TokenBase<enum_class_name>
+ENUM_BASE(enum_class_name), public cpp20scanner::TokenBase<enum_class_name>
 
 template <typename EnumT>
 class TokenBase 
@@ -507,37 +507,37 @@ private:
  * Defining keyword tokens.
  */
 #define ALL_KEYWORD_TOKENS_DEFINITION(enum_class_name) \
-template<> constexpr detail::TokenBase<enum_class_name>::BaseEnumType detail::TokenBase<enum_class_name>::keyword_tokens[]
+template<> constexpr cpp20scanner::TokenBase<enum_class_name>::BaseEnumType cpp20scanner::TokenBase<enum_class_name>::keyword_tokens[]
 
 /**
  * Defining all available tokens.
  */ 
 #define ALL_TOKENS_DEFINITION(enum_class_name) \
-template<> constexpr detail::TokenBase<enum_class_name>::BaseEnumType detail::TokenBase<enum_class_name>::all_tokens[]
+template<> constexpr cpp20scanner::TokenBase<enum_class_name>::BaseEnumType cpp20scanner::TokenBase<enum_class_name>::all_tokens[]
 
 /**
  * Used to mark all keyword tokens.
  */
 #define KEYWORD_MARKER_DEFINITION(enum_class_name) \
-template<> constexpr bool detail::TokenBase<enum_class_name>::_is_keyword[]
+template<> constexpr bool cpp20scanner::TokenBase<enum_class_name>::_is_keyword[]
 
 /**
  * Used to mark all symbol tokens.
  */
 #define SYMBOL_MARKER_DEFINITION(enum_class_name) \
-template<> constexpr bool detail::TokenBase<enum_class_name>::_is_symbol[]
+template<> constexpr bool cpp20scanner::TokenBase<enum_class_name>::_is_symbol[]
 
 /**
  * Used to declare all symbols (string).
  */
 #define SYMBOL_STRING_DEFINITION(enum_class_name) \
-template<> constexpr std::string_view detail::TokenBase<enum_class_name>::_symbols[]
+template<> constexpr std::string_view cpp20scanner::TokenBase<enum_class_name>::_symbols[]
 
 /**
  * Retrieve the value for the enum class the token class wraps.
  */
 #define TOKEN_ENUM_VALUE(enum_class_name, name) \
-detail::TokenBase<enum_class_name>::BaseEnumType::name,
+cpp20scanner::TokenBase<enum_class_name>::BaseEnumType::name,
 
 #endif /* TOKEN_BASE_CLASS */
 
@@ -1064,7 +1064,7 @@ struct SCANNER(TOKEN_CLASS_NAME)
     /**
      * Keep consuming while the character is a digit.
      */
-    [[nodiscard]] detail::Token<TOKEN_CLASS_NAME> scan_number() noexcept
+    [[nodiscard]] cpp20scanner::Token<TOKEN_CLASS_NAME> scan_number() noexcept
     {
         while (std::isdigit(peek())) advance_position();
         return make_token(TOKEN_CLASS_NAME::Number);
@@ -1073,7 +1073,7 @@ struct SCANNER(TOKEN_CLASS_NAME)
     /**
      * Keep consuming while the character is alphanumeric.
      */
-    [[nodiscard]] detail::Token<TOKEN_CLASS_NAME> scan_identifier() noexcept
+    [[nodiscard]] cpp20scanner::Token<TOKEN_CLASS_NAME> scan_identifier() noexcept
     {
         while (std::isalnum(peek()) || peek()=='_') advance_position();
         return make_token(identifier_type());
@@ -1082,7 +1082,7 @@ struct SCANNER(TOKEN_CLASS_NAME)
     /**
      * Consume the whole string.
      */
-    [[nodiscard]] detail::Token<TOKEN_CLASS_NAME> scan_string() noexcept
+    [[nodiscard]] cpp20scanner::Token<TOKEN_CLASS_NAME> scan_string() noexcept
     {
         while (peek() != '"' && !is_at_end())
         {
@@ -1136,26 +1136,26 @@ TOKEN(String)
         ENDMATCH;
     }
 
-    [[nodiscard]] detail::Token<TOKEN_CLASS_NAME> scan_until_character(char token) noexcept
+    [[nodiscard]] cpp20scanner::Token<TOKEN_CLASS_NAME> scan_until_character(char token) noexcept
     {
         while (peek()!=token) advance_position();
         return make_token(TOKEN_CLASS_NAME::Raw);
     }
 
-    [[nodiscard]] detail::Token<TOKEN_CLASS_NAME> scan_until_token(TOKEN_CLASS_NAME token) noexcept
+    [[nodiscard]] cpp20scanner::Token<TOKEN_CLASS_NAME> scan_until_token(TOKEN_CLASS_NAME token) noexcept
     {
         const auto start_pos = current;
-        detail::Token<TOKEN_CLASS_NAME> tok;
+        cpp20scanner::Token<TOKEN_CLASS_NAME> tok;
         while (!is_at_end() && ((tok = scan_token()).type != token)) {/* do nothing */}
         start = start_pos;
         current -= tok.lexeme.size();
         return make_token(TOKEN_CLASS_NAME::Raw);
     }
 
-    [[nodiscard]] detail::Token<TOKEN_CLASS_NAME> scan_body(TOKEN_CLASS_NAME head, TOKEN_CLASS_NAME tail) noexcept
+    [[nodiscard]] cpp20scanner::Token<TOKEN_CLASS_NAME> scan_body(TOKEN_CLASS_NAME head, TOKEN_CLASS_NAME tail) noexcept
     {
         const auto start_pos = current;
-        detail::Token<TOKEN_CLASS_NAME> tok;
+        cpp20scanner::Token<TOKEN_CLASS_NAME> tok;
 
         int scope_count = 1;
         while (scope_count != 0 && !is_at_end())
@@ -1172,7 +1172,7 @@ TOKEN(String)
     /**
      * Return the next token.
      */
-    [[nodiscard]] detail::Token<TOKEN_CLASS_NAME> scan_token() noexcept
+    [[nodiscard]] cpp20scanner::Token<TOKEN_CLASS_NAME> scan_token() noexcept
     {
         skip_whitespace();
         start = current;
@@ -1334,19 +1334,19 @@ TOKEN(String)
     /**
      * Create a token with the current string slice.
      */
-    [[nodiscard]] detail::Token<TOKEN_CLASS_NAME> make_token(const TOKEN_CLASS_NAME type) noexcept 
+    [[nodiscard]] cpp20scanner::Token<TOKEN_CLASS_NAME> make_token(const TOKEN_CLASS_NAME type) noexcept 
     {
         const std::size_t length = current - start;
         const auto what = this->source_code.substr(start, length);
-        return detail::Token(type, this->source_code.substr(start, length), this->line);
+        return cpp20scanner::Token(type, this->source_code.substr(start, length), this->line);
     }
 
     /**
      * Create an error token.
      */
-    [[nodiscard]] detail::Token<TOKEN_CLASS_NAME> error_token(const std::string& message) noexcept 
+    [[nodiscard]] cpp20scanner::Token<TOKEN_CLASS_NAME> error_token(const std::string& message) noexcept 
     {
-        return detail::Token(TOKEN_CLASS_NAME::Error, message, this->line);
+        return cpp20scanner::Token(TOKEN_CLASS_NAME::Error, message, this->line);
     }
 
   private:
@@ -1363,6 +1363,5 @@ TOKEN(String)
 #undef JOIN
 #endif
 
-#undef detail
 #undef TOKEN_DESCRIPTOR_FILE
 #undef TOKEN_CLASS_NAME

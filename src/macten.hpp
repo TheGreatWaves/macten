@@ -35,16 +35,16 @@ struct DeclarativeTemplate
   * Members.
   */
  std::string                                m_name;
- std::vector<detail::Token<MactenAllToken>> m_token_stream;
+ std::vector<cpp20scanner::Token<MactenAllToken>> m_token_stream;
 };
 
-class DeclarativeMacroParser : public detail::BaseParser<MactenTokenScanner, MactenToken>
+class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanner, MactenToken>
 {
  private:
   using Token = MactenToken;
  public:
    [[nodiscard]] explicit DeclarativeMacroParser(const std::string& file_path)
-       : detail::BaseParser<MactenTokenScanner, MactenToken>(file_path)
+       : cpp20scanner::BaseParser<MactenTokenScanner, MactenToken>(file_path)
    {
    }
 
@@ -162,7 +162,7 @@ public:
 
   // Tokenize the file.
   // TODO: Move this logic into scanner.
-  std::vector<detail::Token<MactenAllToken>> file_tokens;
+  std::vector<cpp20scanner::Token<MactenAllToken>> file_tokens;
 
   MactenAllTokenScanner scanner{};
   if (!scanner.read_source(m_source_path))
