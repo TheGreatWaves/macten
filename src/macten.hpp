@@ -66,6 +66,14 @@ class DeclarativeMacroParser : public detail::BaseParser<MactenTokenScanner, Mac
    }
 
  private:
+  auto skip_whitespace() noexcept -> void
+  {
+   while (check(Token::Tab))
+   {
+     advance();
+   }
+  }
+
   auto declaration() noexcept -> void 
   {
    if (match(Token::DeclarativeDefinition))
@@ -90,8 +98,17 @@ class DeclarativeMacroParser : public detail::BaseParser<MactenTokenScanner, Mac
 
     if (check(Token::LBrace))
     {
+     scanner.skip_whitespace();
      current = this->scanner.scan_body(Token::LBrace, Token::RBrace);
      auto macro_body = current.lexeme;
+
+     // This is less than ideal.
+     while (macro_body.ends_with('\n') 
+        ||  macro_body.ends_with('\t') 
+        ||  macro_body.ends_with(' '))
+     {
+      macro_body.pop_back();
+     }
 
      advance();
 
