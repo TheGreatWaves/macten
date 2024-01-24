@@ -9,18 +9,27 @@
 #include <vector>
 #include <optional>
 #include <unordered_map>
+
+#include "utils.hpp"
 #include "macten_tokens.hpp"
 #include "macten_all_tokens.hpp"
+
 
 /**
  * Declarative Macro.
  */
 struct DeclarativeTemplate
 {
+private:
+ using Token = cpp20scanner::Token<MactenAllToken>;
+
+public:
+
  DeclarativeTemplate() = default;
 
- explicit DeclarativeTemplate(std::string name, const std::string& body)
+ explicit DeclarativeTemplate(std::string name, const std::string& body, std::vector<std::string> args = {})
  : m_name(name)
+ , m_arguments(args)
  {
   MactenAllTokenScanner scanner;
   scanner.set_source(body);
@@ -31,12 +40,34 @@ struct DeclarativeTemplate
   }
  }
 
+ auto apply(std::vector<Token>& target) const -> void
+ {
+   target.insert(std::end(target), std::begin(m_token_stream), std::end(m_token_stream));
+ }
+
  /**
   * Members.
   */
- std::string                                m_name;
+ std::string                                      m_name;
+ std::vector<std::string>                         m_arguments;
  std::vector<cpp20scanner::Token<MactenAllToken>> m_token_stream;
 };
+
+struct DeclarativeMacroDetail
+{
+ auto construct_template() const -> DeclarativeTemplate
+ {
+  return DeclarativeTemplate(m_name, m_body, m_args);
+ }
+
+ /**
+  * Members;
+  */
+ std::string              m_name;
+ std::string              m_body;
+ std::vector<std::string> m_args;
+};
+
 
 class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanner, MactenToken>
 {
@@ -86,11 +117,21 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
     // Parse arguments.
     consume(Token::LParen, "Expected arguments, missing '(', found: '" + previous.lexeme + "'.");
 
+
+    std::vector<std::string> macro_args;
     while(!match(Token::RParen))
     {
-     const auto argname = current.lexeme;
-     log("Argname: " + argname);
-     advance();
+     // Retrieve the first argument.
+     consume(Token::Identifier, "Expected argument name.");
+     const auto arg = previous.lexeme;
+     macro_args.push_back(arg);
+
+     while (match(Token::Comma))
+     {
+      consume(Token::Identifier, "Expected argument name.");
+      const auto arg = previous.lexeme;
+      macro_args.push_back(arg);
+     }
     }
 
     consume(Token::Equal, "Expected '='");
@@ -113,7 +154,7 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
      advance();
 
      consume(Token::RBrace, "Expected '}' the end of macro body, found: " + previous.lexeme);
-     m_macros.emplace_back(macro_name, macro_body);
+     m_macros.emplace_back(macro_name, macro_body, macro_args);
      return;
     }
     report_error("Expected macro body, missing '{'");
@@ -124,8 +165,11 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
    }
   }
  public: 
- std::vector<std::pair<std::string, std::string>> m_macros;
+ std::vector<DeclarativeMacroDetail> m_macros;
 };
+
+// TODO: This class needs to be refactored.
+// WARN: Do it before it becomes too big.
 class MactenWriter
 {
 public:
@@ -142,9 +186,8 @@ public:
   const auto res = parser.parse();
   if (res)
   {
-   std::for_each(parser.m_macros.begin(), parser.m_macros.end(), [this](const auto& pair) {
-     const auto& [macro_name, macro_body] = pair;
-     m_declarative_macro_rules[macro_name] = DeclarativeTemplate(macro_name, macro_body);
+   std::for_each(parser.m_macros.begin(), parser.m_macros.end(), [this](const auto& macro_detail) {
+     m_declarative_macro_rules[macro_detail.m_name] = macro_detail.construct_template();
    });
   }
   return res;
@@ -172,8 +215,9 @@ public:
   while (!scanner.is_at_end())
   {
    const auto tok = scanner.scan_token();
+   const auto macro_call_found = m_declarative_macro_rules.contains(tok.lexeme);
 
-   if (m_declarative_macro_rules.contains(tok.lexeme))
+   if (macro_call_found)
    {
     const auto next1 = scanner.scan_token();
     const auto next2 = scanner.scan_token();
@@ -181,13 +225,27 @@ public:
     if (next1.type == MactenAllToken::Exclamation 
     && next2.type == MactenAllToken::LSquare)
     {
-     auto _ = scanner.scan_body(MactenAllToken::LSquare, MactenAllToken::RSquare);
+     const auto& macro_rule = m_declarative_macro_rules.at(tok.lexeme);
+     const auto arg_body = scanner.scan_body(MactenAllToken::LSquare, MactenAllToken::RSquare);
+     const auto args = macten::utils::map_raw_args_string_to_names(macro_rule.m_arguments, arg_body.lexeme);
 
-     const auto& macro_body = m_declarative_macro_rules.at(tok.lexeme).m_token_stream;
-     file_tokens.insert(std::end(file_tokens), std::begin(macro_body), std::end(macro_body));
+     if (args)
+     {
+      for (const auto& [k, v] : args.value())
+      {
+      std::cout << "Arg: " << k << " -> " << v << '\n';
+      }
+     }
 
-     // Consume ']' of the arg list.
-     _ = scanner.scan_token();
+     macro_rule.apply(file_tokens);
+     const auto closing_square = scanner.scan_token();
+
+     if (closing_square.type != MactenAllToken::RSquare)
+     {
+      std::cerr << "Expected closing square, found: '" << closing_square.lexeme << "'\n";
+      return false;
+     }
+
      continue;
     }
    }
