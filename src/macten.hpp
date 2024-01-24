@@ -40,9 +40,37 @@ public:
   }
  }
 
- auto apply(std::vector<Token>& target) const -> void
+ [[nodiscard]] auto apply(std::vector<Token>& target, std::map<std::string, std::string> args = {}) const -> bool
  {
-   target.insert(std::end(target), std::begin(m_token_stream), std::end(m_token_stream));
+   if (args.size() != m_arguments.size()) return false;
+
+   std::vector<Token> result_token_stream {};
+
+   for (std::size_t i = 0; i < m_token_stream.size(); i++)
+   {
+    const auto token = m_token_stream[i];
+
+    const bool is_arg {token.type == MactenAllToken::Dollar
+                   &&  (i+1)<m_token_stream.size()
+                   &&  args.contains(m_token_stream[i+1].lexeme)};
+
+    // An argname has been found, substitute value in.
+    if (is_arg)
+    {
+     const auto argname = m_token_stream[i+1].lexeme;
+     result_token_stream.emplace_back(MactenAllToken::Raw, args[argname], 0);
+
+     // Skip over the argname.
+     i++;
+     continue;
+    }
+   
+    result_token_stream.push_back(token);
+   }
+
+   target.insert(std::end(target), std::begin(result_token_stream), std::end(result_token_stream));
+
+   return true;
  }
 
  /**
@@ -229,15 +257,15 @@ public:
      const auto arg_body = scanner.scan_body(MactenAllToken::LSquare, MactenAllToken::RSquare);
      const auto args = macten::utils::map_raw_args_string_to_names(macro_rule.m_arguments, arg_body.lexeme);
 
-     if (args)
+     for (const auto& [k, v] : args.value())
      {
-      for (const auto& [k, v] : args.value())
-      {
-      std::cout << "Arg: " << k << " -> " << v << '\n';
-      }
+      std::cout << "Key: " << k << " - value: " << v << '\n';
      }
-
-     macro_rule.apply(file_tokens);
+     if (!macro_rule.apply(file_tokens, args.value_or(std::map<std::string, std::string>{})))
+     {
+      std::cerr << "Failed to apply macro rule.\n";
+      return false;
+     }
      const auto closing_square = scanner.scan_token();
 
      if (closing_square.type != MactenAllToken::RSquare)
