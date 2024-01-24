@@ -1142,13 +1142,21 @@ TOKEN(String)
         return make_token(TOKEN_CLASS_NAME::Raw);
     }
 
-    [[nodiscard]] cpp20scanner::Token<TOKEN_CLASS_NAME> scan_until_token(TOKEN_CLASS_NAME token) noexcept
+    template<std::same_as<TOKEN_CLASS_NAME> ...Tokens>
+    [[nodiscard]] cpp20scanner::Token<TOKEN_CLASS_NAME> scan_until_token(TOKEN_CLASS_NAME token, Tokens ... tokens) noexcept
     {
         const auto start_pos = current;
         cpp20scanner::Token<TOKEN_CLASS_NAME> tok;
-        while (!is_at_end() && ((tok = scan_token()).type != token)) {/* do nothing */}
+        
+        // Keep scanning while it's neither of the tokens specified.
+        while ((tok = scan_token()).type != TOKEN_CLASS_NAME::EndOfFile 
+              && (tok.type != token
+              || ((tok.type != tokens) || ...))) 
+        {/* Do nothing */}
+        
         start = start_pos;
         current -= tok.lexeme.size();
+        
         return make_token(TOKEN_CLASS_NAME::Raw);
     }
 
@@ -1329,7 +1337,6 @@ TOKEN(String)
         ++current;
         return true;
     }
-
 
     /**
      * Create a token with the current string slice.
