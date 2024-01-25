@@ -10,10 +10,13 @@
 #include <optional>
 #include <unordered_map>
 
+#include "token_stream.hpp"
 #include "utils.hpp"
 #include "macten_tokens.hpp"
 #include "macten_all_tokens.hpp"
 
+
+class MactenWriter;
 
 /**
  * Declarative Macro.
@@ -40,45 +43,18 @@ public:
   }
  }
 
- [[nodiscard]] auto apply(std::vector<Token>& target, std::map<std::string, std::string> args = {}) const -> bool
- {
-   if (args.size() != m_arguments.size()) return false;
-
-   std::vector<Token> result_token_stream {};
-
-   for (std::size_t i = 0; i < m_token_stream.size(); i++)
-   {
-    const auto token = m_token_stream[i];
-
-    const bool is_arg {token.type == MactenAllToken::Dollar
-                   &&  (i+1)<m_token_stream.size()
-                   &&  args.contains(m_token_stream[i+1].lexeme)};
-
-    // An argname has been found, substitute value in.
-    if (is_arg)
-    {
-     const auto argname = m_token_stream[i+1].lexeme;
-     result_token_stream.emplace_back(MactenAllToken::Raw, args[argname], 0);
-
-     // Skip over the argname.
-     i++;
-     continue;
-    }
-   
-    result_token_stream.push_back(token);
-   }
-
-   target.insert(std::end(target), std::begin(result_token_stream), std::end(result_token_stream));
-
-   return true;
- }
+ [[nodiscard]] auto apply(
+     MactenWriter* env,
+     TokenStreamType(MactenAllToken)& target, 
+     std::map<std::string, std::string> args = {}
+  ) const -> bool;
 
  /**
   * Members.
   */
- std::string                                      m_name;
- std::vector<std::string>                         m_arguments;
- std::vector<cpp20scanner::Token<MactenAllToken>> m_token_stream;
+ std::string                     m_name;
+ std::vector<std::string>        m_arguments;
+ TokenStreamType(MactenAllToken) m_token_stream;
 };
 
 struct DeclarativeMacroDetail
@@ -200,6 +176,9 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
 // WARN: Do it before it becomes too big.
 class MactenWriter
 {
+private:
+ using DeclarativeMacroRules = std::unordered_map<std::string, DeclarativeTemplate>;
+ inline static const std::map<std::string, std::string> EmptyArgList {};
 public:
 
  explicit MactenWriter(std::string_view path, std::string_view output_name)
@@ -221,25 +200,16 @@ public:
   return res;
  }
 
- /**
-  * Tokenize. Substitute. Rebuild.
-  * NOTE: At the moment, this requires two passes. This can be addressed later.
-  */
- auto process() -> bool
+ auto has_macro(const std::string& name) -> bool
  {
-  // Generate parse rules.
-  // This is the first pass.
-  generate_declarative_rules();
+  return m_declarative_macro_rules.contains(name);
+ }
 
-  // Tokenize the file.
-  // TODO: Move this logic into scanner.
-  std::vector<cpp20scanner::Token<MactenAllToken>> file_tokens;
-
+ auto apply_macro_rules(TokenStreamType(MactenAllToken)& target, TokenStreamType(MactenAllToken)& source) -> bool
+ {
   MactenAllTokenScanner scanner{};
-  if (!scanner.read_source(m_source_path))
-  {
-   return false;
-  }
+  scanner.set_source(source.construct());
+  
   while (!scanner.is_at_end())
   {
    const auto tok = scanner.scan_token();
@@ -253,19 +223,22 @@ public:
     if (next1.type == MactenAllToken::Exclamation 
     && next2.type == MactenAllToken::LSquare)
     {
+     // std::cout << "Expanding: " << tok.lexeme << '\n';
      const auto& macro_rule = m_declarative_macro_rules.at(tok.lexeme);
      const auto arg_body = scanner.scan_body(MactenAllToken::LSquare, MactenAllToken::RSquare);
      const auto args = macten::utils::map_raw_args_string_to_names(macro_rule.m_arguments, arg_body.lexeme);
 
-     for (const auto& [k, v] : args.value())
-     {
-      std::cout << "Key: " << k << " - value: " << v << '\n';
-     }
-     if (!macro_rule.apply(file_tokens, args.value_or(std::map<std::string, std::string>{})))
+     // for (const auto& [k, v] : args.value())
+     // {
+      // std::cout << "Key: " << k << " - value: " << v << '\n';
+     // }
+
+     if (!macro_rule.apply(this, target, args.value_or(EmptyArgList)))
      {
       std::cerr << "Failed to apply macro rule.\n";
       return false;
      }
+
      const auto closing_square = scanner.scan_token();
 
      if (closing_square.type != MactenAllToken::RSquare)
@@ -277,15 +250,37 @@ public:
      continue;
     }
    }
-   file_tokens.push_back(tok);
+   target.push_back(tok);
   }
+  return true;
+ }
+ 
 
-  for (const auto& t : file_tokens)
+ /**
+  * Tokenize. Substitute. Rebuild.
+  * NOTE: At the moment, this requires two passes. This can be addressed later.
+  */
+ auto process() -> bool
+ {
+  // Generate parse rules.
+  // This is the first pass.
+  generate_declarative_rules();
+
+  // Tokenize the file.
+  // TODO: Move this logic into scanner.
+  TokenStreamType(MactenAllToken) file_tokens;
+  auto source_tokens = TokenStreamType(MactenAllToken)::from_file(m_source_path);
+
+  const auto res = apply_macro_rules(file_tokens, source_tokens);
+
+  // std::cout << "\n===================================\n";
+  for (const auto& t : file_tokens.m_tokens)
   {
    std::cout << t.lexeme;
   }
+  // std::cout << "\n===================================\n";
 
-  return true;
+  return res;
  }
 
  /**
@@ -299,7 +294,7 @@ public:
 private:
  const std::string                                    m_source_path;
  const std::string                                    m_output_name;
- std::unordered_map<std::string, DeclarativeTemplate> m_declarative_macro_rules;
+ DeclarativeMacroRules                                m_declarative_macro_rules;
 };
 
 #endif /* MACTEN_H */
