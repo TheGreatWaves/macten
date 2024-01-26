@@ -765,7 +765,6 @@ TOKEN(Raw)
 TOKEN(EndOfFile)
 TOKEN(Number)
 TOKEN(Identifier)
-TOKEN(String)
 #include TOKEN_DESCRIPTOR_FILE
 #undef SYMBOL_TOKEN
 #undef KEYWORD_TOKEN
@@ -800,7 +799,6 @@ TOKEN(Raw)
 TOKEN(EndOfFile)
 TOKEN(Number)
 TOKEN(Identifier)
-TOKEN(String)
 #include TOKEN_DESCRIPTOR_FILE
 #undef SYMBOL_TOKEN
 #undef KEYWORD_TOKEN
@@ -826,7 +824,6 @@ TOKEN(Raw)
 TOKEN(EndOfFile)
 TOKEN(Number)
 TOKEN(Identifier)
-TOKEN(String)
 #include TOKEN_DESCRIPTOR_FILE
 #undef SYMBOL_TOKEN
 #undef KEYWORD_TOKEN
@@ -855,7 +852,6 @@ TOKEN(Raw)
 TOKEN(EndOfFile)
 TOKEN(Number)
 TOKEN(Identifier)
-TOKEN(String)
 #include TOKEN_DESCRIPTOR_FILE
 #undef SYMBOL_TOKEN
 #undef KEYWORD_TOKEN
@@ -889,7 +885,6 @@ TOKEN(Raw)
 TOKEN(EndOfFile)
 TOKEN(Number)
 TOKEN(Identifier)
-TOKEN(String)
 #include TOKEN_DESCRIPTOR_FILE
 #undef SYMBOL_TOKEN
 #undef KEYWORD_TOKEN
@@ -917,7 +912,6 @@ TOKEN(Raw)
 TOKEN(EndOfFile)
 TOKEN(Number)
 TOKEN(Identifier)
-TOKEN(String)
 #include TOKEN_DESCRIPTOR_FILE
 #undef SYMBOL_TOKEN
 #undef KEYWORD_TOKEN
@@ -946,7 +940,6 @@ TOKEN(Raw)
 TOKEN(EndOfFile)
 TOKEN(Number)
 TOKEN(Identifier)
-TOKEN(String)
 #include TOKEN_DESCRIPTOR_FILE
 #undef SYMBOL_TOKEN
 #undef KEYWORD_TOKEN
@@ -975,7 +968,6 @@ TOKEN(Raw)
 TOKEN(EndOfFile)
 TOKEN(Number)
 TOKEN(Identifier)
-TOKEN(String)
 #include TOKEN_DESCRIPTOR_FILE
 #undef SYMBOL_TOKEN
 #undef KEYWORD_TOKEN
@@ -1005,7 +997,6 @@ TOKEN(Raw)
 TOKEN(EndOfFile)
 TOKEN(Number)
 TOKEN(Identifier)
-TOKEN(String)
 #include TOKEN_DESCRIPTOR_FILE
 #undef SYMBOL_TOKEN
 #undef KEYWORD_TOKEN
@@ -1080,26 +1071,6 @@ struct SCANNER(TOKEN_CLASS_NAME)
     }
 
     /**
-     * Consume the whole string.
-     */
-    [[nodiscard]] cpp20scanner::Token<TOKEN_CLASS_NAME> scan_string() noexcept
-    {
-        while (peek() != '"' && !is_at_end())
-        {
-            if (peek() == '\n') ++line;
-            advance_position();
-        }
-
-        if (is_at_end())
-            return error_token("Unterminated string.");
-
-        // Terminator.
-        advance();
-
-        return make_token(TOKEN_CLASS_NAME::String);
-    }
-
-    /**
      * Return the identifer type. This could return as
      * one of the keyword types.
      */
@@ -1127,7 +1098,6 @@ TOKEN(Raw)
 TOKEN(EndOfFile)
 TOKEN(Number)
 TOKEN(Identifier)
-TOKEN(String)
 #include TOKEN_DESCRIPTOR_FILE
 #undef SYMBOL_TOKEN
 #undef KEYWORD_TOKEN
@@ -1204,7 +1174,6 @@ TOKEN(String)
         #define CCASE(character, token) break; case character: return make_token(token)
         switch (c)
         {
-            break; case '"': return scan_string();
             #define SYMBOL_TOKEN(name, symbol) break; case symbol[0]: return make_token(TOKEN_CLASS_NAME::name);
 #ifndef TOKEN
 #define TOKEN(name)
@@ -1223,7 +1192,6 @@ TOKEN(Raw)
 TOKEN(EndOfFile)
 TOKEN(Number)
 TOKEN(Identifier)
-TOKEN(String)
 #include TOKEN_DESCRIPTOR_FILE
 #undef SYMBOL_TOKEN
 #undef KEYWORD_TOKEN
