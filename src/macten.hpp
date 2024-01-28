@@ -223,15 +223,9 @@ public:
     if (next1.type == MactenAllToken::Exclamation 
     && next2.type == MactenAllToken::LSquare)
     {
-     // std::cout << "Expanding: " << tok.lexeme << '\n';
      const auto& macro_rule = m_declarative_macro_rules.at(tok.lexeme);
      const auto arg_body = scanner.scan_body(MactenAllToken::LSquare, MactenAllToken::RSquare);
      const auto args = macten::utils::map_raw_args_string_to_names(macro_rule.m_arguments, arg_body.lexeme);
-
-     // for (const auto& [k, v] : args.value())
-     // {
-      // std::cout << "Key: " << k << " - value: " << v << '\n';
-     // }
 
      if (!macro_rule.apply(this, target, args.value_or(EmptyArgList)))
      {
@@ -254,6 +248,84 @@ public:
   }
   return true;
  }
+
+
+ // Remove macro definitions. This is done to exclude it from the final generated source code.
+ // TODO: Improve this! At the moment there is no easy way to skip whitespace.
+ auto preprocess(TokenStreamType(MactenAllToken)& source) -> TokenStreamType(MactenAllToken) 
+ {
+  TokenStreamType(MactenAllToken) processed_tokens {};
+  std::size_t source_stream_size = source.size();
+
+  for (std::size_t i = 0; i < source_stream_size; i++)
+  {
+   const auto tok = source.at(i);
+   std::size_t skip_step {0};
+
+   if (tok.type == MactenAllToken::DeclarativeDefinition)
+   {
+
+    // NOTE: This is ugly and horrible. Improvement to API for tokens needed ASAP.
+    if ((i+skip_step+1) < source_stream_size 
+    && (source.at(i+skip_step+1).type == MactenAllToken::Space) || (source.at(i+skip_step+1).type == MactenAllToken::Tab))
+    {
+     skip_step++;
+    }
+
+    // Skip macro name.
+    if ((i+skip_step+1) < source_stream_size && source.at(i+skip_step+1).type == MactenAllToken::Identifier)
+    {
+     skip_step++;
+    }
+
+    // NOTE: Hackfix. Need to remove.
+    if ((i+skip_step+1) < source_stream_size 
+    && (source.at(i+skip_step+1).type == MactenAllToken::Space) || (source.at(i+skip_step+1).type == MactenAllToken::Tab))
+    {
+     skip_step++;
+    }
+
+    // Skip macro body.
+    if ((i+skip_step+1) < source_stream_size && source.at(i+skip_step+1).type == MactenAllToken::LBrace)
+    {
+     skip_step++;
+     std::size_t brace_scope = 1;
+
+     while ((i+skip_step+1) < source_stream_size)
+     {
+      skip_step++;
+      const auto body_tok = source.at(i+skip_step);
+
+      if (body_tok.type == MactenAllToken::LBrace)
+      {
+       brace_scope++;
+      }
+      else if (body_tok.type == MactenAllToken::RBrace)
+      {
+       brace_scope--;
+      }
+
+      if (brace_scope == 0) break;
+     }
+    }
+
+    // NOTE: We don't need to care about the newline.
+    if ((i+skip_step+1) < source_stream_size 
+    && source.at(i+skip_step+1).type == MactenAllToken::Newline)
+    {
+     skip_step++;
+    }
+
+    i += skip_step;
+    continue;
+   }
+
+   processed_tokens.push_back(tok);
+  }
+
+
+  return processed_tokens;
+ }
  
 
  /**
@@ -268,13 +340,14 @@ public:
 
   // Tokenize the file.
   // TODO: Move this logic into scanner.
-  TokenStreamType(MactenAllToken) file_tokens;
+  TokenStreamType(MactenAllToken) result_tokens;
   auto source_tokens = TokenStreamType(MactenAllToken)::from_file(m_source_path);
+  source_tokens = preprocess(source_tokens);
 
-  const auto res = apply_macro_rules(file_tokens, source_tokens);
+  const auto res = apply_macro_rules(result_tokens, source_tokens);
 
   // std::cout << "\n===================================\n";
-  for (const auto& t : file_tokens.m_tokens)
+  for (const auto& t : result_tokens.m_tokens)
   {
    std::cout << t.lexeme;
   }
