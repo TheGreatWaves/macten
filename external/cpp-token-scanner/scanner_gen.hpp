@@ -575,6 +575,11 @@ struct Token
     {
     }
 
+    [[nodiscard]] static auto make(TokenType t, std::string_view l) -> Token<TokenType>
+    {
+        return Token(t, l, 0);
+    }
+
     /**
      * MEMBERS.
      */

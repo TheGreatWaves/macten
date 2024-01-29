@@ -39,7 +39,7 @@ public:
 
   while (!scanner.is_at_end())
   {
-   m_token_stream.push_back(scanner.scan_token());
+   m_token_stream.push(scanner.scan_token());
   }
  }
 
@@ -207,45 +207,51 @@ public:
 
  auto apply_macro_rules(TokenStreamType(MactenAllToken)& target, TokenStreamType(MactenAllToken)& source) -> bool
  {
-  MactenAllTokenScanner scanner{};
-  scanner.set_source(source.construct());
-  
-  while (!scanner.is_at_end())
+
+  // for (std::size_t index = 0; index < source_size; index++)
+  // {
+  //  const auto token = source.at(index);
+  //  const auto macro_call_found = m_declarative_macro_rules.contains(token.lexeme);
+  // }
+
+  while (!source.empty())
   {
-   const auto tok = scanner.scan_token();
-   const auto macro_call_found = m_declarative_macro_rules.contains(tok.lexeme);
-
-   if (macro_call_found)
-   {
-    const auto next1 = scanner.scan_token();
-    const auto next2 = scanner.scan_token();
-
-    if (next1.type == MactenAllToken::Exclamation 
-    && next2.type == MactenAllToken::LSquare)
-    {
-     const auto& macro_rule = m_declarative_macro_rules.at(tok.lexeme);
-     const auto arg_body = scanner.scan_body(MactenAllToken::LSquare, MactenAllToken::RSquare);
-     const auto args = macten::utils::map_raw_args_string_to_names(macro_rule.m_arguments, arg_body.lexeme);
-
-     if (!macro_rule.apply(this, target, args.value_or(EmptyArgList)))
-     {
-      std::cerr << "Failed to apply macro rule.\n";
-      return false;
-     }
-
-     const auto closing_square = scanner.scan_token();
-
-     if (closing_square.type != MactenAllToken::RSquare)
-     {
-      std::cerr << "Expected closing square, found: '" << closing_square.lexeme << "'\n";
-      return false;
-     }
-
-     continue;
-    }
-   }
-   target.push_back(tok);
+   const auto token = source.pop();
   }
+
+  //  if (macro_call_found)
+  //  {
+  //   const auto next1 = scanner.scan_token();
+  //   const auto next2 = scanner.scan_token();
+
+  //   if (next1.type == MactenAllToken::Exclamation 
+  //   && next2.type == MactenAllToken::LSquare)
+  //   {
+  //    const auto& macro_rule = m_declarative_macro_rules.at(tok.lexeme);
+  //    const auto arg_body = scanner.scan_body(MactenAllToken::LSquare, MactenAllToken::RSquare);
+  //    const auto args = macten::utils::map_raw_args_string_to_names(macro_rule.m_arguments, arg_body.lexeme);
+
+  //    if (!macro_rule.apply(this, target, args.value_or(EmptyArgList)))
+  //    {
+  //     std::cerr << "Failed to apply macro rule.\n";
+  //     return false;
+  //    }
+
+  //    const auto closing_square = scanner.scan_token();
+
+  //    if (closing_square.type != MactenAllToken::RSquare)
+  //    {
+  //     std::cerr << "Expected closing square, found: '" << closing_square.lexeme << "'\n";
+  //     return false;
+  //    }
+
+  //    continue;
+  //   }
+  //  }
+  //  target.push_back(tok);
+  // }
+  // return true;
+
   return true;
  }
 
@@ -254,77 +260,78 @@ public:
  // TODO: Improve this! At the moment there is no easy way to skip whitespace.
  auto preprocess(TokenStreamType(MactenAllToken)& source) -> TokenStreamType(MactenAllToken) 
  {
-  TokenStreamType(MactenAllToken) processed_tokens {};
-  std::size_t source_stream_size = source.size();
+  // TokenStreamType(MactenAllToken) processed_tokens {};
+  // std::size_t source_stream_size = source.size();
 
-  for (std::size_t i = 0; i < source_stream_size; i++)
-  {
-   const auto tok = source.at(i);
-   std::size_t skip_step {0};
+  // for (std::size_t i = 0; i < source_stream_size; i++)
+  // {
+  //  const auto tok = source.at(i);
+  //  std::size_t skip_step {0};
 
-   if (tok.type == MactenAllToken::DeclarativeDefinition)
-   {
+  //  if (tok.type == MactenAllToken::DeclarativeDefinition)
+  //  {
 
-    // NOTE: This is ugly and horrible. Improvement to API for tokens needed ASAP.
-    if ((i+skip_step+1) < source_stream_size 
-    && (source.at(i+skip_step+1).type == MactenAllToken::Space) || (source.at(i+skip_step+1).type == MactenAllToken::Tab))
-    {
-     skip_step++;
-    }
+  //   // NOTE: This is ugly and horrible. Improvement to API for tokens needed ASAP.
+  //   if ((i+skip_step+1) < source_stream_size 
+  //   && (source.at(i+skip_step+1).type == MactenAllToken::Space) || (source.at(i+skip_step+1).type == MactenAllToken::Tab))
+  //   {
+  //    skip_step++;
+  //   }
 
-    // Skip macro name.
-    if ((i+skip_step+1) < source_stream_size && source.at(i+skip_step+1).type == MactenAllToken::Identifier)
-    {
-     skip_step++;
-    }
+  //   // Skip macro name.
+  //   if ((i+skip_step+1) < source_stream_size && source.at(i+skip_step+1).type == MactenAllToken::Identifier)
+  //   {
+  //    skip_step++;
+  //   }
 
-    // NOTE: Hackfix. Need to remove.
-    if ((i+skip_step+1) < source_stream_size 
-    && (source.at(i+skip_step+1).type == MactenAllToken::Space) || (source.at(i+skip_step+1).type == MactenAllToken::Tab))
-    {
-     skip_step++;
-    }
+  //   // NOTE: Hackfix. Need to remove.
+  //   if ((i+skip_step+1) < source_stream_size 
+  //   && (source.at(i+skip_step+1).type == MactenAllToken::Space) || (source.at(i+skip_step+1).type == MactenAllToken::Tab))
+  //   {
+  //    skip_step++;
+  //   }
 
-    // Skip macro body.
-    if ((i+skip_step+1) < source_stream_size && source.at(i+skip_step+1).type == MactenAllToken::LBrace)
-    {
-     skip_step++;
-     std::size_t brace_scope = 1;
+  //   // Skip macro body.
+  //   if ((i+skip_step+1) < source_stream_size && source.at(i+skip_step+1).type == MactenAllToken::LBrace)
+  //   {
+  //    skip_step++;
+  //    std::size_t brace_scope = 1;
 
-     while ((i+skip_step+1) < source_stream_size)
-     {
-      skip_step++;
-      const auto body_tok = source.at(i+skip_step);
+  //    while ((i+skip_step+1) < source_stream_size)
+  //    {
+  //     skip_step++;
+  //     const auto body_tok = source.at(i+skip_step);
 
-      if (body_tok.type == MactenAllToken::LBrace)
-      {
-       brace_scope++;
-      }
-      else if (body_tok.type == MactenAllToken::RBrace)
-      {
-       brace_scope--;
-      }
+  //     if (body_tok.type == MactenAllToken::LBrace)
+  //     {
+  //      brace_scope++;
+  //     }
+  //     else if (body_tok.type == MactenAllToken::RBrace)
+  //     {
+  //      brace_scope--;
+  //     }
 
-      if (brace_scope == 0) break;
-     }
-    }
+  //     if (brace_scope == 0) break;
+  //    }
+  //   }
 
-    // NOTE: We don't need to care about the newline.
-    if ((i+skip_step+1) < source_stream_size 
-    && source.at(i+skip_step+1).type == MactenAllToken::Newline)
-    {
-     skip_step++;
-    }
+  //   // NOTE: We don't need to care about the newline.
+  //   if ((i+skip_step+1) < source_stream_size 
+  //   && source.at(i+skip_step+1).type == MactenAllToken::Newline)
+  //   {
+  //    skip_step++;
+  //   }
 
-    i += skip_step;
-    continue;
-   }
+  //   i += skip_step;
+  //   continue;
+  //  }
 
-   processed_tokens.push_back(tok);
-  }
+  //  processed_tokens.push(tok);
+  // }
 
 
-  return processed_tokens;
+  // return processed_tokens;
+  return {};
  }
  
 
@@ -339,7 +346,6 @@ public:
   generate_declarative_rules();
 
   // Tokenize the file.
-  // TODO: Move this logic into scanner.
   TokenStreamType(MactenAllToken) result_tokens;
   auto source_tokens = TokenStreamType(MactenAllToken)::from_file(m_source_path);
   source_tokens = preprocess(source_tokens);
@@ -347,10 +353,10 @@ public:
   const auto res = apply_macro_rules(result_tokens, source_tokens);
 
   // std::cout << "\n===================================\n";
-  for (const auto& t : result_tokens.m_tokens)
-  {
-   std::cout << t.lexeme;
-  }
+  // for (const auto& t : result_tokens.m_tokens)
+  // {
+  //  std::cout << t.lexeme;
+  // }
   // std::cout << "\n===================================\n";
 
   return res;
