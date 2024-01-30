@@ -209,18 +209,13 @@ public:
  {
   auto source_view = source.get_view();
 
-  // while (!source_view.is_at_end())
-  // {
-   // const auto token = source_view.peek();
+  while (!source_view.is_at_end())
+  {
+   const auto token = source_view.pop();
 
-   // // TODO: Perhaps this should be changed to another separate routine.
-   // const auto macro_call_found = m_declarative_macro_rules.contains(token.lexeme);
-
-   // if (macro_call_found)
-   // {
-    
-   // }
-  // }
+   // TODO: Perhaps this should be changed to another separate routine.
+   const auto macro_call_found = m_declarative_macro_rules.contains(token.lexeme);
+  }
 
   // for (std::size_t index = 0; index < source_size; index++)
   // {
@@ -270,6 +265,69 @@ public:
  }
 
  /**
+  * Skip macro definition. This removes the macten definitions from the source code.
+  */
+ auto skip_macro_definition(TokenStreamType(MactenAllToken)::TokenStreamView& view, TokenStreamType(MactenAllToken)& target) -> void
+ {
+  using TokenType = MactenAllToken;
+  view.skip(TokenType::Space, TokenType::Tab, TokenType::Newline, TokenType::Identifier);
+
+  int16_t brace_scope {1};
+
+  if (view.consume(TokenType::LBrace))
+  {
+   while (!view.is_at_end() && brace_scope > 0)
+   {
+    switch (view.peek().type)
+    {
+     break; case TokenType::LBrace: ++brace_scope;
+     break; case TokenType::RBrace: --brace_scope;
+     break; default: {}
+    }
+    view.advance();
+   }
+
+   view.skip(TokenType::Space, TokenType::Tab, TokenType::Newline);
+  }
+ }
+
+ /**
+  * Tidy macro call site. This allows for convenient assumptions during the expansion phase.
+  */
+ auto tidy_macro_call_site(TokenStreamType(MactenAllToken)::TokenStreamView& view, TokenStreamType(MactenAllToken)& target) -> void
+ {
+  using TokenType = MactenAllToken;
+  view.skip(TokenType::Space, TokenType::Tab, TokenType::Newline);
+
+  while (!view.is_at_end())
+  {
+   const auto token = view.pop();
+
+   if (token.is(TokenType::Space))
+   {
+    while (view.peek().is(TokenType::Space))
+    {
+     view.advance();
+    }
+
+    if (!view.peek().is(TokenType::Comma))
+    {
+     target.push_back(token);
+    }
+    continue;
+   }
+   else if (token.is(TokenType::Comma))
+   {
+    view.skip(TokenType::Space, TokenType::Tab, TokenType::Newline);
+    target.push_back(token);
+    continue;
+   }
+   
+   target.push_back(token);
+  }
+ }
+
+ /**
   * Remove macro definitions from the final generated code.
   */
  auto preprocess(TokenStreamType(MactenAllToken)& source) -> TokenStreamType(MactenAllToken) 
@@ -283,27 +341,21 @@ public:
   {
    const auto token = source_view.pop();
 
-   if (token.is(MactenAllToken::DeclarativeDefinition))
+   if (token.is(TokenType::DeclarativeDefinition))
    {
-    source_view.skip(TokenType::Space, TokenType::Tab, TokenType::Newline, TokenType::Identifier);
-
-    int16_t brace_scope {1};
-
-    if (source_view.consume(TokenType::LBrace))
-    {
-     while (!source_view.is_at_end() && brace_scope > 0)
-     {
-      switch (source_view.peek().type)
-      {
-       break; case TokenType::LBrace: ++brace_scope;
-       break; case TokenType::RBrace: --brace_scope;
-       break; default: {}
-      }
-      source_view.advance();
-     }
-
-     source_view.skip(TokenType::Space, TokenType::Tab, TokenType::Newline);
-    }
+    skip_macro_definition(source_view, processed_tokens);
+    continue;
+   }
+   else if (token.is(TokenType::Identifier) 
+        && m_declarative_macro_rules.contains(token.lexeme)
+        && source_view.match(TokenType::Exclamation)
+        && source_view.peek(1).is(TokenType::LSquare))
+   {
+    processed_tokens.push_back(token);
+    processed_tokens.push_back(source_view.peek(0));
+    processed_tokens.push_back(source_view.peek(1));
+    source_view.advance(2);
+    tidy_macro_call_site(source_view, processed_tokens);
     continue;
    }
 
@@ -326,20 +378,22 @@ public:
   // Tokenize the file.
   TokenStreamType(MactenAllToken) result_tokens;
   auto source_tokens = TokenStreamType(MactenAllToken)::from_file(m_source_path);
+
+  std::cout << "Raw \n======================================================\n";
+  std::cout << source_tokens.construct();
+  std::cout << "\n======================================================\n";
+
   source_tokens = preprocess(source_tokens);
 
-  std::cout << "After preprocessor\n======================================================\n";
+  std::cout << "After preprocess\n======================================================\n";
   std::cout << source_tokens.construct();
   std::cout << "\n======================================================\n";
 
   const auto res = apply_macro_rules(result_tokens, source_tokens);
 
-  // std::cout << "\n===================================\n";
-  // for (const auto& t : result_tokens.m_tokens)
-  // {
-  //  std::cout << t.lexeme;
-  // }
-  // std::cout << "\n===================================\n";
+  std::cout << "After macro rules\n======================================================\n";
+  std::cout << source_tokens.construct();
+  std::cout << "\n======================================================\n";
 
   return res;
  }

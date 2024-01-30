@@ -580,6 +580,17 @@ struct Token
         return Token(t, l, 0);
     }
 
+    [[nodiscard]] auto is(TokenType t) const noexcept -> bool
+    {
+     return type == t;        
+    }
+
+    template <std::same_as<TokenType>... TokenTypes>
+    [[nodiscard]] auto any_of(TokenTypes... types) const noexcept -> bool
+    {
+      return (is(types) || ...);
+    }
+
     /**
      * MEMBERS.
      */
