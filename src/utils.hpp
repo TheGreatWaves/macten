@@ -14,6 +14,7 @@ namespace macten
    * The arguments are expected to be comma separated.
    * 
    * NOTE: Map is used instead of unordered_map because the expected number of arguments is rather low.
+   * TODO: Refactor to use TokenStream & TokenStreamView.
    */
   inline auto map_raw_args_string_to_names(const std::vector<std::string>& names, const std::string& raw_arglist) -> std::optional<std::map<std::string, std::string>>
   {
