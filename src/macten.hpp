@@ -144,16 +144,33 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
     if (check(Token::LBrace))
     {
      scanner.skip_whitespace();
-     current = this->scanner.scan_body(Token::LBrace, Token::RBrace);
-     auto macro_body = current.lexeme;
+     auto macro_body_token = this->scanner.scan_body(Token::LBrace, Token::RBrace);
 
-     // This is less than ideal.
-     while (macro_body.ends_with('\n') 
-        ||  macro_body.ends_with('\t') 
-        ||  macro_body.ends_with(' '))
+     auto token_stream = TokenStreamType(MactenAllToken)::from_string(macro_body_token.lexeme);
+     auto token_stream_view = token_stream.get_view();
+
+     TokenStreamType(MactenAllToken) token_stream_result;
+
+     while (!token_stream_view.is_at_end())
      {
-      macro_body.pop_back();
+      const auto token = token_stream_view.pop();
+
+      if (token.is(MactenAllToken::Newline))
+      {
+        auto _ = token_stream_view.consume(MactenAllToken::Tab, MactenAllToken::Space);
+        _ = token_stream_view.consume(MactenAllToken::Tab, MactenAllToken::Space);
+      }
+
+      token_stream_result.push_back(token);
      }
+
+     token_stream_result.pop_back();
+    
+     auto macro_body = token_stream_result.construct();
+
+     std::cout << "\nMacro body:\n===================================================\n";
+     std::cout << macro_body;
+     std::cout << "\n===================================================\n";
 
      advance();
 
@@ -407,9 +424,9 @@ public:
  }
  
 private:
- const std::string                                    m_source_path;
- const std::string                                    m_output_name;
- DeclarativeMacroRules                                m_declarative_macro_rules;
+ const std::string     m_source_path;
+ const std::string     m_output_name;
+ DeclarativeMacroRules m_declarative_macro_rules;
 };
 
 #endif /* MACTEN_H */
