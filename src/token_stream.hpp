@@ -52,10 +52,17 @@ struct TokenStream
    {
    }
 
+   TokenStreamView(std::size_t start_index, std::size_t max_size, const TokenStream* ts)
+   : m_current_pointer{ start_index }
+   , m_max_size{ max_size }
+   , m_target{ ts }
+   {
+   }
+
   /**
    * Returns true when the view has been exhausted.
    */
-  [[nodiscard]] auto is_at_end(std::size_t offset = 0) noexcept -> bool
+  [[nodiscard]] auto is_at_end(std::size_t offset = 0) const noexcept -> bool
   {
    return (m_current_pointer + offset) >= m_max_size;
   }
@@ -65,12 +72,24 @@ struct TokenStream
    *
    * NOTE: If the index is greater than the size of the view, EndOfFile will be returned.
    */
-  [[nodiscard]] auto peek(std::size_t offset = 0) noexcept -> Token
+  [[nodiscard]] auto peek(std::size_t offset = 0) const noexcept -> Token
   {
     const bool invalid_target = m_target == nullptr;
     if (invalid_target || is_at_end(offset)) return Token();
 
     return m_target->at(m_current_pointer + offset);
+  }
+
+  /**
+   * Returns the top Token with an offset.
+   */
+  [[nodiscard]] auto peek_back(std::size_t offset = 1) const noexcept -> Token
+  {
+    const bool invalid_target = m_target == nullptr;
+    const int index = static_cast<int>(m_current_pointer) - offset;
+    if (invalid_target || index < 0) return Token();
+
+    return m_target->at(index);
   }
 
   /**
@@ -81,6 +100,34 @@ struct TokenStream
   {
     std::size_t offset {0};
     return ((peek(offset++).type == tokens) && ...);
+  }
+
+  /**
+   * Create a sub view.
+   */
+  [[nodiscard]] auto sub_view(std::size_t size = 0) -> TokenStreamView
+  {
+    return TokenStreamView{
+     m_current_pointer,
+     m_current_pointer + size,
+     m_target
+    };
+  }
+
+  /**
+   * Return the remaining size of the view.
+   */
+  [[nodiscard]] auto remaining_size() const noexcept -> std::size_t
+  {
+    return m_max_size - m_current_pointer;
+  }
+
+  /**
+   * Return the size of the view.
+   */
+  [[nodiscard]] auto size() const noexcept -> std::size_t
+  {
+    return m_max_size;
   }
 
   /**
@@ -138,6 +185,43 @@ struct TokenStream
    {
     advance();
    }
+  }
+
+  /**
+   * Return the string form of the view.
+   */
+  [[nodiscard]] auto construct() const noexcept -> std::string
+  {
+    std::stringstream ss {};
+
+    std::size_t offset {0};   
+    while (!is_at_end(offset))
+    {
+     ss << peek(offset).lexeme;
+     offset++;
+    }
+
+    return ss.str();
+  }
+
+  /**
+   * Starting from the current point, scan until the specified token type is found. 
+   * Return a new view which holds all of the tokens before the given point.
+   */
+  auto until(TokenType token_type) -> TokenStreamView
+  {
+   std::size_t offset {0};
+
+   while (!peek(offset).is(token_type))
+   {
+    offset++;
+   }
+
+   return TokenStreamView {
+     m_current_pointer,
+     m_current_pointer + offset,
+     m_target
+   };
   }
 
  private:
