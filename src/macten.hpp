@@ -322,7 +322,9 @@ public:
   using TokenType = MactenAllToken;
   view.skip(TokenType::Space, TokenType::Tab, TokenType::Newline);
 
-  while (!view.is_at_end())
+  int16_t brace_scope {1};
+
+  while (!view.is_at_end() && brace_scope > 0)
   {
    const auto token = view.pop();
 
@@ -345,7 +347,14 @@ public:
     target.push_back(token);
     continue;
    }
-   
+   else if (token.is(TokenType::LSquare))
+   {
+    brace_scope++;
+   }
+   else if (token.is(TokenType::RSquare))
+   {
+    brace_scope--;
+   }
    target.push_back(token);
   }
  }
