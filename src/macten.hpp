@@ -45,6 +45,7 @@ public:
 
  [[nodiscard]] auto apply(
      MactenWriter* env,
+     const std::string& indentation,
      TokenStreamType(MactenAllToken)& target, 
      std::map<std::string, std::string> args = {}
   ) const -> bool;
@@ -222,61 +223,66 @@ public:
   return m_declarative_macro_rules.contains(name);
  }
 
+ /**
+  * Apply macro rules.
+  */
  auto apply_macro_rules(TokenStreamType(MactenAllToken)& target, TokenStreamType(MactenAllToken)& source) -> bool
  {
+  using TokenType = MactenAllToken;
   auto source_view = source.get_view();
 
   while (!source_view.is_at_end())
   {
    const auto token = source_view.pop();
 
-   // TODO: Perhaps this should be changed to another separate routine.
-   const auto macro_call_found = m_declarative_macro_rules.contains(token.lexeme);
+   const auto macro_call_found = (token.is(TokenType::Identifier) 
+                               && source_view.match_sequence(TokenType::Exclamation, TokenType::LSquare))
+                               && m_declarative_macro_rules.contains(token.lexeme);
+
+   if (macro_call_found)
+   {
+    // Count the whitespace to keep consistent indentation.
+    std::size_t ws_count {2};
+    std::size_t spacing_count {0};
+    while (!source_view.peek_back(ws_count).any_of(TokenType::Newline, TokenType::EndOfFile)) 
+    { 
+     spacing_count += source_view.peek_back(ws_count).lexeme.size();
+     ws_count++; 
+    }
+    std::string ws(spacing_count, ' ');
+
+    std::cout << "Found macro call for : '" << token.lexeme << "'\n";
+
+    // Skip over '!' and '['.
+    source_view.advance(2);
+
+    const auto& macro_rule = m_declarative_macro_rules.at(token.lexeme);
+
+    const auto body_view { source_view.until(TokenType::RSquare) };
+    source_view.advance(body_view.remaining_size());
+
+    // Skip over ']'.
+    if (!source_view.consume(TokenType::RSquare))
+    {
+     std::cerr << "Macro call missing closing ']'.\n";
+     return false;
+    }
+
+    // Map arguments.
+    const auto arg_body = body_view.construct();
+    const auto args = macten::utils::map_raw_args_string_to_names(macro_rule.m_arguments, arg_body);
+
+    if (!macro_rule.apply(this, ws, target, args.value_or(EmptyArgList)))
+    {
+     std::cerr << "Failed to apply macro rule.\n";
+     return false;
+    }
+
+    continue;
+   }
+
+   target.push_back(token);
   }
-
-  // for (std::size_t index = 0; index < source_size; index++)
-  // {
-  //  const auto token = source.at(index);
-  //  const auto macro_call_found = m_declarative_macro_rules.contains(token.lexeme);
-  // }
-
-  // while (!source.empty())
-  // {
-  //  const auto token = source.pop();
-  // }
-
-  //  if (macro_call_found)
-  //  {
-  //   const auto next1 = scanner.scan_token();
-  //   const auto next2 = scanner.scan_token();
-
-  //   if (next1.type == MactenAllToken::Exclamation 
-  //   && next2.type == MactenAllToken::LSquare)
-  //   {
-  //    const auto& macro_rule = m_declarative_macro_rules.at(tok.lexeme);
-  //    const auto arg_body = scanner.scan_body(MactenAllToken::LSquare, MactenAllToken::RSquare);
-  //    const auto args = macten::utils::map_raw_args_string_to_names(macro_rule.m_arguments, arg_body.lexeme);
-
-  //    if (!macro_rule.apply(this, target, args.value_or(EmptyArgList)))
-  //    {
-  //     std::cerr << "Failed to apply macro rule.\n";
-  //     return false;
-  //    }
-
-  //    const auto closing_square = scanner.scan_token();
-
-  //    if (closing_square.type != MactenAllToken::RSquare)
-  //    {
-  //     std::cerr << "Expected closing square, found: '" << closing_square.lexeme << "'\n";
-  //     return false;
-  //    }
-
-  //    continue;
-  //   }
-  //  }
-  //  target.push_back(tok);
-  // }
-  // return true;
 
   return true;
  }
@@ -409,7 +415,7 @@ public:
   const auto res = apply_macro_rules(result_tokens, source_tokens);
 
   std::cout << "After macro rules\n======================================================\n";
-  std::cout << source_tokens.construct();
+  std::cout << result_tokens.construct();
   std::cout << "\n======================================================\n";
 
   return res;

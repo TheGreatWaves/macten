@@ -1,59 +1,59 @@
 #include "macten.hpp"
+#include "token_stream.hpp"
 
 auto DeclarativeTemplate::apply(
      MactenWriter* env,
+     const std::string& indentation,
      TokenStreamType(MactenAllToken)& target, 
      std::map<std::string, std::string> args
 ) const -> bool 
  {
+   using TokenType = MactenAllToken;
 
-   // if (args.size() != m_arguments.size()) return false;
+   if (args.size() != m_arguments.size()) return false;
 
-   // TokenStreamType(MactenAllToken) result_token_stream {};
+   auto view = m_token_stream.get_view();
 
-   // for (std::size_t i = 0; i < m_token_stream.size(); i++)
-   // {
-   //  const auto token = m_token_stream.at(i);
+   while (!view.is_at_end())
+   {
+    const bool is_arg {
+     view.match_sequence(TokenType::Dollar, TokenType::Identifier)
+    };
+    const bool is_macro_call {
+     view.match_sequence(TokenType::Identifier, TokenType::Exclamation, TokenType::LSquare)
+    };
 
-   //  const bool is_arg {token.type == MactenAllToken::Dollar
-   //                 &&  (i+1)<m_token_stream.size()
-   //                 &&  args.contains(m_token_stream.at(i+1).lexeme)};
+    const auto token = view.pop();
 
-   //  // An argname has been found, substitute value in.
-   //  if (is_arg)
-   //  {
-   //   const auto argname = m_token_stream.at(i+1).lexeme;
-   //   result_token_stream.add_string(args[argname]);
+    if (token.is(TokenType::Newline))
+    {
+     target.push_back(token);
+     target.add_string(indentation);
+     continue;
+    }
+    else if (is_macro_call && env->has_macro(token.lexeme))
+    {
+     continue;
+    }
+    else if (is_arg)
+    {
+     const std::string argname = view.peek().lexeme;
+     view.advance();
 
-   //   // Skip over the argname.
-   //   i++;
-   //   continue;
-   //  }
+     if (args.contains(argname))
+     {
+      target.add_string(args[argname]);
+     }
+     else
+     {
+      std::cerr << "Failed to substitute argument name '" << argname << "'\n";
+      return false;
+     }
 
-   //  const bool is_macro_call = {
-   //   env->has_macro(token.lexeme)
-   //   && (i+1) < m_token_stream.size()
-   //   && m_token_stream.at(i+1).type == MactenAllToken::Exclamation
-   //  };
+     continue;
+    }
 
-   //  if (is_macro_call)
-   //  {
-   //    TokenStreamType(MactenAllToken) macro_call;
-   //    do {
-   //     macro_call.push_back(m_token_stream.at(i));
-   //    } while (m_token_stream.at(i++).type != MactenAllToken::RSquare);
-   //    i--;
-
-   //    env->apply_macro_rules(result_token_stream, macro_call);
-   //    continue;
-   //  }
-   
-   //  result_token_stream.push_back(token);
-   // }
-
-   // // std::cout << "Result: \n========================\n" << result_token_stream.construct() << "\n========================\n";
-
-   // target.m_tokens.insert(std::end(target.m_tokens), std::begin(result_token_stream.m_tokens), std::end(result_token_stream.m_tokens));
-
+    target.push_back(token);
+   }
    return true;
  }
