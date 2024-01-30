@@ -6,7 +6,6 @@ auto DeclarativeTemplate::apply(
      std::map<std::string, std::string> args
 ) const -> bool 
  {
-   // TODO: Rewrite me!
 
    // if (args.size() != m_arguments.size()) return false;
 

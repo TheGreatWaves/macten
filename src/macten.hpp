@@ -207,6 +207,20 @@ public:
 
  auto apply_macro_rules(TokenStreamType(MactenAllToken)& target, TokenStreamType(MactenAllToken)& source) -> bool
  {
+  auto source_view = source.get_view();
+
+  // while (!source_view.is_at_end())
+  // {
+   // const auto token = source_view.peek();
+
+   // // TODO: Perhaps this should be changed to another separate routine.
+   // const auto macro_call_found = m_declarative_macro_rules.contains(token.lexeme);
+
+   // if (macro_call_found)
+   // {
+    
+   // }
+  // }
 
   // for (std::size_t index = 0; index < source_size; index++)
   // {
@@ -255,85 +269,49 @@ public:
   return true;
  }
 
-
- // Remove macro definitions. This is done to exclude it from the final generated source code.
- // TODO: Improve this! At the moment there is no easy way to skip whitespace.
+ /**
+  * Remove macro definitions from the final generated code.
+  */
  auto preprocess(TokenStreamType(MactenAllToken)& source) -> TokenStreamType(MactenAllToken) 
  {
-  // TokenStreamType(MactenAllToken) processed_tokens {};
-  // std::size_t source_stream_size = source.size();
+  using TokenType = MactenAllToken;
 
-  // for (std::size_t i = 0; i < source_stream_size; i++)
-  // {
-  //  const auto tok = source.at(i);
-  //  std::size_t skip_step {0};
+  TokenStreamType(MactenAllToken) processed_tokens {};
+  auto source_view = source.get_view();
 
-  //  if (tok.type == MactenAllToken::DeclarativeDefinition)
-  //  {
+  while (!source_view.is_at_end())
+  {
+   const auto token = source_view.pop();
 
-  //   // NOTE: This is ugly and horrible. Improvement to API for tokens needed ASAP.
-  //   if ((i+skip_step+1) < source_stream_size 
-  //   && (source.at(i+skip_step+1).type == MactenAllToken::Space) || (source.at(i+skip_step+1).type == MactenAllToken::Tab))
-  //   {
-  //    skip_step++;
-  //   }
+   if (token.is(MactenAllToken::DeclarativeDefinition))
+   {
+    source_view.skip(TokenType::Space, TokenType::Tab, TokenType::Newline, TokenType::Identifier);
 
-  //   // Skip macro name.
-  //   if ((i+skip_step+1) < source_stream_size && source.at(i+skip_step+1).type == MactenAllToken::Identifier)
-  //   {
-  //    skip_step++;
-  //   }
+    int16_t brace_scope {1};
 
-  //   // NOTE: Hackfix. Need to remove.
-  //   if ((i+skip_step+1) < source_stream_size 
-  //   && (source.at(i+skip_step+1).type == MactenAllToken::Space) || (source.at(i+skip_step+1).type == MactenAllToken::Tab))
-  //   {
-  //    skip_step++;
-  //   }
+    if (source_view.consume(TokenType::LBrace))
+    {
+     while (!source_view.is_at_end() && brace_scope > 0)
+     {
+      switch (source_view.peek().type)
+      {
+       break; case TokenType::LBrace: ++brace_scope;
+       break; case TokenType::RBrace: --brace_scope;
+       break; default: {}
+      }
+      source_view.advance();
+     }
 
-  //   // Skip macro body.
-  //   if ((i+skip_step+1) < source_stream_size && source.at(i+skip_step+1).type == MactenAllToken::LBrace)
-  //   {
-  //    skip_step++;
-  //    std::size_t brace_scope = 1;
+     source_view.skip(TokenType::Space, TokenType::Tab, TokenType::Newline);
+    }
+    continue;
+   }
 
-  //    while ((i+skip_step+1) < source_stream_size)
-  //    {
-  //     skip_step++;
-  //     const auto body_tok = source.at(i+skip_step);
+   processed_tokens.push_back(token);
+  }
 
-  //     if (body_tok.type == MactenAllToken::LBrace)
-  //     {
-  //      brace_scope++;
-  //     }
-  //     else if (body_tok.type == MactenAllToken::RBrace)
-  //     {
-  //      brace_scope--;
-  //     }
-
-  //     if (brace_scope == 0) break;
-  //    }
-  //   }
-
-  //   // NOTE: We don't need to care about the newline.
-  //   if ((i+skip_step+1) < source_stream_size 
-  //   && source.at(i+skip_step+1).type == MactenAllToken::Newline)
-  //   {
-  //    skip_step++;
-  //   }
-
-  //   i += skip_step;
-  //   continue;
-  //  }
-
-  //  processed_tokens.push(tok);
-  // }
-
-
-  // return processed_tokens;
-  return {};
+  return processed_tokens;
  }
- 
 
  /**
   * Tokenize. Substitute. Rebuild.
@@ -349,6 +327,10 @@ public:
   TokenStreamType(MactenAllToken) result_tokens;
   auto source_tokens = TokenStreamType(MactenAllToken)::from_file(m_source_path);
   source_tokens = preprocess(source_tokens);
+
+  std::cout << "After preprocessor\n======================================================\n";
+  std::cout << source_tokens.construct();
+  std::cout << "\n======================================================\n";
 
   const auto res = apply_macro_rules(result_tokens, source_tokens);
 
