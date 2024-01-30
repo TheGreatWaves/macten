@@ -39,7 +39,7 @@ public:
 
   while (!scanner.is_at_end())
   {
-   m_token_stream.push(scanner.scan_token());
+   m_token_stream.push_back(scanner.scan_token());
   }
  }
 
@@ -214,10 +214,10 @@ public:
   //  const auto macro_call_found = m_declarative_macro_rules.contains(token.lexeme);
   // }
 
-  while (!source.empty())
-  {
-   const auto token = source.pop();
-  }
+  // while (!source.empty())
+  // {
+  //  const auto token = source.pop();
+  // }
 
   //  if (macro_call_found)
   //  {

@@ -56,5 +56,5 @@ auto DeclarativeTemplate::apply(
 
    // target.m_tokens.insert(std::end(target.m_tokens), std::begin(result_token_stream.m_tokens), std::end(result_token_stream.m_tokens));
 
-   // return true;
+   return true;
  }
