@@ -4,6 +4,7 @@
 #include <map>
 #include <optional>
 #include "macten_tokens.hpp"
+#include "token_stream.hpp"
 
 namespace macten
 {
@@ -14,40 +15,64 @@ namespace macten
    * The arguments are expected to be comma separated.
    * 
    * NOTE: Map is used instead of unordered_map because the expected number of arguments is rather low.
-   * TODO: Refactor to use TokenStream & TokenStreamView.
    */
   inline auto map_raw_args_string_to_names(const std::vector<std::string>& names, const std::string& raw_arglist) -> std::optional<std::map<std::string, std::string>>
   {
-   using Token = MactenToken;
+   using TokenType = MactenAllToken;
+   using AllTokenStream = TokenStreamType(MactenAllToken);
+
+   const auto ts = AllTokenStream::from_string(raw_arglist);
+   auto view = ts.get_view();
+
    std::map<std::string, std::string> mapping{};
-   const auto expected_argcount = names.size();
 
-   MactenTokenScanner scanner;
-   scanner.set_source(raw_arglist);
+   const std::size_t expected_argcount = names.size();
 
-   uint8_t argcount{0};
-   while (!scanner.is_at_end())
+   uint8_t argcount{0}, brace_scope{0}, square_scope{0}, paren_scope{0};
+
+   AllTokenStream ts_buffer {};
+
+   while (!view.is_at_end())
    {
-    scanner.skip_whitespace();
-    const auto tok = scanner.scan_until_token(Token::Comma);
-    const auto next = scanner.scan_token();
+    const auto token = view.pop();
 
-    if (next.type != Token::Comma && next.type != Token::EndOfFile)
+    switch (token.type)
     {
-     // Unexpected.
-     // TODO: Maybe better error handling here.
-     return {};
+#define SCOPE_CASE(Name, name) \
+     break; case TokenType::L##Name: { name##_scope++; ts_buffer.push_back(token); } \
+     break; case TokenType::R##Name: { name##_scope--; ts_buffer.push_back(token); }
+     SCOPE_CASE(Paren, paren)
+     SCOPE_CASE(Square, square)
+     SCOPE_CASE(Brace, brace)
+#undef SCOPE_CASE
+     break; case TokenType::Comma: 
+     {
+      if (brace_scope == 0 && square_scope == 0 && paren_scope == 0)
+      {
+        if (argcount < expected_argcount)
+        {
+         mapping[names[argcount]] = ts_buffer.construct();
+         argcount++;
+        }
+        ts_buffer.clear();
+      }
+      else
+      {
+       ts_buffer.push_back(token);
+      }
+     }
+     break; default: { ts_buffer.push_back(token); }
     }
-
-    if (argcount < expected_argcount)
-    {
-     mapping[names[argcount]] = tok.lexeme;
-     argcount++;
-    }
-
-    scanner.skip_whitespace();
    }
 
+   // Handle last argument. This also works for argless.
+   if (argcount < expected_argcount)
+   {
+    mapping[names[argcount]] = ts_buffer.construct();
+    argcount++;
+   }
+
+   // Arity error. 
    if (argcount != expected_argcount) return {};
 
    return mapping;
