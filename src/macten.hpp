@@ -258,7 +258,7 @@ public:
 
     const auto& macro_rule = m_declarative_macro_rules.at(token.lexeme);
 
-    const auto body_view { source_view.until(TokenType::RSquare) };
+    const auto body_view { source_view.between(TokenType::LSquare, TokenType::RSquare) };
     source_view.advance(body_view.remaining_size());
 
     // Skip over ']'.

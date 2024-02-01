@@ -224,6 +224,52 @@ struct TokenStream
    };
   }
 
+ /**
+  * Retrieve the stream of tokens in the scope created by the head/tail pair.
+  * Note: You are expected to have passed the head token when this is called. If not, `in_scope` can be denoted to false to capture the next occurence of the scope.
+  */
+ auto between(TokenType head, TokenType tail, bool in_scope = true) -> TokenStreamView 
+ {
+   std::size_t offset {0}, start_offset {0};
+
+   // Find the next pair/scope.
+   if (!in_scope) 
+   {
+    while (!peek(start_offset).is(head)) 
+    {
+     start_offset++;
+    }
+    start_offset++;
+    offset = start_offset;
+   }
+
+   std::size_t scope = 1;
+
+   while (!peek(offset).is(TokenType::EndOfFile))
+   {
+    const auto tok = peek(offset);
+
+    if (tok.is(head))
+    {
+     scope++;
+    }
+    else if (tok.is(tail))
+    {
+     scope--;
+
+     if (scope==0) break;
+    }
+
+    offset++;
+   }
+
+   return TokenStreamView {
+     m_current_pointer + start_offset, // Start
+     m_current_pointer + offset,       // Size
+     m_target
+   };
+ }
+
  private:
   /**
    * Members.
@@ -336,6 +382,11 @@ struct TokenStream
  [[nodiscard]] auto get_view() const noexcept -> TokenStreamView
  {
    return TokenStreamView(this);
+ }
+
+ auto clear() noexcept -> void 
+ {
+   m_tokens.clear();
  }
 
  /**
