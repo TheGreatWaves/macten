@@ -34,7 +34,7 @@ public:
  : m_name(name)
  , m_arguments(args)
  {
-  MactenAllTokenScanner scanner;
+  MactenAllToken::Scanner scanner;
   scanner.set_source(body);
 
   while (!scanner.is_at_end())
@@ -46,7 +46,7 @@ public:
  [[nodiscard]] auto apply(
      MactenWriter* env,
      const std::string& indentation,
-     TokenStreamType(MactenAllToken)& target, 
+     macten::TokenStream<MactenAllToken>& target, 
      std::map<std::string, std::string> args = {}
   ) const -> bool;
 
@@ -55,7 +55,7 @@ public:
   */
  std::string                     m_name;
  std::vector<std::string>        m_arguments;
- TokenStreamType(MactenAllToken) m_token_stream;
+ macten::TokenStream<MactenAllToken> m_token_stream;
 };
 
 struct DeclarativeMacroDetail
@@ -147,10 +147,10 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
      scanner.skip_whitespace();
      auto macro_body_token = this->scanner.scan_body(Token::LBrace, Token::RBrace);
 
-     auto token_stream = TokenStreamType(MactenAllToken)::from_string(macro_body_token.lexeme);
+     auto token_stream = macten::TokenStream<MactenAllToken>::from_string(macro_body_token.lexeme);
      auto token_stream_view = token_stream.get_view();
 
-     TokenStreamType(MactenAllToken) token_stream_result;
+     macten::TokenStream<MactenAllToken> token_stream_result;
 
      while (!token_stream_view.is_at_end())
      {
@@ -226,7 +226,7 @@ public:
  /**
   * Apply macro rules.
   */
- auto apply_macro_rules(TokenStreamType(MactenAllToken)& target, TokenStreamType(MactenAllToken)& source) -> bool
+ auto apply_macro_rules(macten::TokenStream<MactenAllToken>& target, macten::TokenStream<MactenAllToken>& source) -> bool
  {
   using TokenType = MactenAllToken;
   auto source_view = source.get_view();
@@ -290,7 +290,7 @@ public:
  /**
   * Skip macro definition. This removes the macten definitions from the source code.
   */
- auto skip_macro_definition(TokenStreamType(MactenAllToken)::TokenStreamView& view, TokenStreamType(MactenAllToken)& target) -> void
+ auto skip_macro_definition(macten::TokenStream<MactenAllToken>::TokenStreamView& view, macten::TokenStream<MactenAllToken>& target) -> void
  {
   using TokenType = MactenAllToken;
   view.skip(TokenType::Space, TokenType::Tab, TokenType::Newline, TokenType::Identifier);
@@ -317,7 +317,7 @@ public:
  /**
   * Tidy macro call site. This allows for convenient assumptions during the expansion phase.
   */
- auto tidy_macro_call_site(TokenStreamType(MactenAllToken)::TokenStreamView& view, TokenStreamType(MactenAllToken)& target) -> void
+ auto tidy_macro_call_site(macten::TokenStream<MactenAllToken>::TokenStreamView& view, macten::TokenStream<MactenAllToken>& target) -> void
  {
   using TokenType = MactenAllToken;
   view.skip(TokenType::Space, TokenType::Tab, TokenType::Newline);
@@ -362,11 +362,11 @@ public:
  /**
   * Remove macro definitions from the final generated code.
   */
- auto preprocess(TokenStreamType(MactenAllToken)& source) -> TokenStreamType(MactenAllToken) 
+ auto preprocess(macten::TokenStream<MactenAllToken>& source) -> macten::TokenStream<MactenAllToken> 
  {
   using TokenType = MactenAllToken;
 
-  TokenStreamType(MactenAllToken) processed_tokens {};
+  macten::TokenStream<MactenAllToken> processed_tokens {};
   auto source_view = source.get_view();
 
   while (!source_view.is_at_end())
@@ -408,8 +408,8 @@ public:
   generate_declarative_rules();
 
   // Tokenize the file.
-  TokenStreamType(MactenAllToken) result_tokens;
-  auto source_tokens = TokenStreamType(MactenAllToken)::from_file(m_source_path);
+  macten::TokenStream<MactenAllToken> result_tokens;
+  auto source_tokens = macten::TokenStream<MactenAllToken>::from_file(m_source_path);
 
   std::cout << "Raw \n======================================================\n";
   std::cout << source_tokens.construct();

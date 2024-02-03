@@ -19,7 +19,7 @@ namespace macten
   inline auto map_raw_args_string_to_names(const std::vector<std::string>& names, const std::string& raw_arglist) -> std::optional<std::map<std::string, std::string>>
   {
    using TokenType = MactenAllToken;
-   using AllTokenStream = TokenStreamType(MactenAllToken);
+   using AllTokenStream = macten::TokenStream<MactenAllToken>;
 
    const auto ts = AllTokenStream::from_string(raw_arglist);
    auto view = ts.get_view();

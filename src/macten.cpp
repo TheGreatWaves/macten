@@ -4,7 +4,7 @@
 auto DeclarativeTemplate::apply(
      MactenWriter* env,
      const std::string& indentation,
-     TokenStreamType(MactenAllToken)& target, 
+     macten::TokenStream<MactenAllToken>& target, 
      std::map<std::string, std::string> args
 ) const -> bool 
  {

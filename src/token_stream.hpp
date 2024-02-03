@@ -17,13 +17,14 @@ namespace macten
  /**
   * A stream of tokens of the specified token type.
   */
-template <typename TokenType, typename TokenTypeScanner>
+template <typename TokenType>
 struct TokenStream
 {
  /**
   * Aliases.
   */
  using Token = cpp20scanner::Token<TokenType>;
+ using Scanner = typename TokenType::Scanner;
 
  /**
   * Structures.
@@ -301,7 +302,7 @@ struct TokenStream
   */
  auto add_string(const std::string& input) -> void
  {
-   TokenTypeScanner scanner;
+   Scanner scanner;
    scanner.set_source(input);
    while (!scanner.is_at_end())
    {
@@ -322,7 +323,7 @@ struct TokenStream
   */
  static auto from_string(const std::string& input) -> TokenStream
  {
-  TokenStream<TokenType, TokenTypeScanner> t;
+  TokenStream<TokenType> t;
   t.add_string(input);
   return t;
  }
@@ -333,7 +334,7 @@ struct TokenStream
  static auto from_file(const std::string& path) -> TokenStream
  {
   TokenStream ts{};
-  TokenTypeScanner scanner{};
+  Scanner scanner{};
   if (!scanner.read_source(path)) return ts;
   while (!scanner.is_at_end())
   {
@@ -395,9 +396,6 @@ struct TokenStream
  std::vector<Token> m_tokens;
 };
 
-
 } // namespace macten
-
-#define TokenStreamType(TokenType) macten::TokenStream<TokenType, TokenType ## Scanner>
 
 #endif /* MACTEN_TOKEN_STREAM_H */

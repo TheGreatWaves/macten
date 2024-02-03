@@ -788,12 +788,20 @@ TOKEN(Identifier)
 #undef TOKEN
 };
 
+#ifndef SCANNER
+#define SCANNER(name) JOIN(name, Scanner)
+#endif
+
+struct SCANNER(TOKEN_CLASS_NAME);
+
 /**
  * Subclass from EnumBase.
  */
 class TOKEN_CLASS_NAME : public TOKEN_BASE(TOKEN_CLASS_NAME)
 {
 public:
+    using Scanner = SCANNER(TOKEN_CLASS_NAME);
+    
 /**
  * Generate constant declarations.
  */
@@ -1026,9 +1034,6 @@ TOKEN(Identifier)
 #include <sstream>
 #include <string>
 
-#ifndef SCANNER
-#define SCANNER(name) JOIN(name, Scanner)
-#endif
 
 /**
  * The Scanner class is responsible for
