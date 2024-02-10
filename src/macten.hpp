@@ -169,9 +169,9 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
     
      auto macro_body = token_stream_result.construct();
 
-     std::cout << "\nMacro body:\n===================================================\n";
-     std::cout << macro_body;
-     std::cout << "\n===================================================\n";
+     // std::cout << "\nMacro body:\n===================================================\n";
+     // std::cout << macro_body;
+     // std::cout << "\n===================================================\n";
 
      advance();
 
@@ -251,7 +251,7 @@ public:
     }
     std::string ws(spacing_count, ' ');
 
-    std::cout << "Found macro call for : '" << token.lexeme << "'\n";
+    // std::cout << "Found macro call for : '" << token.lexeme << "'\n";
 
     // Skip over '!' and '['.
     source_view.advance(2);
@@ -411,19 +411,19 @@ public:
   macten::TokenStream<MactenAllToken> result_tokens;
   auto source_tokens = macten::TokenStream<MactenAllToken>::from_file(m_source_path);
 
-  std::cout << "Raw \n======================================================\n";
-  std::cout << source_tokens.construct();
-  std::cout << "\n======================================================\n";
+  // std::cout << "Raw \n======================================================\n";
+  // std::cout << source_tokens.construct();
+  // std::cout << "\n======================================================\n";
 
   source_tokens = preprocess(source_tokens);
 
-  std::cout << "After preprocess\n======================================================\n";
-  std::cout << source_tokens.construct();
-  std::cout << "\n======================================================\n";
+  // std::cout << "After preprocess\n======================================================\n";
+  // std::cout << source_tokens.construct();
+  // std::cout << "\n======================================================\n";
 
   const auto res = apply_macro_rules(result_tokens, source_tokens);
 
-  std::cout << "After macro rules\n======================================================\n";
+  std::cout << "Result\n======================================================\n";
   std::cout << result_tokens.construct();
   std::cout << "\n======================================================\n";
 
