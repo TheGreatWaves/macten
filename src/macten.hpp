@@ -40,14 +40,8 @@ public:
  explicit DeclarativeTemplate(std::string name, const std::string& body, std::vector<std::string> args = {})
  : m_name(name)
  , m_arguments(args)
+ , m_token_stream(macten::TokenStream<MactenAllToken>::from_string(body))
  {
-  MactenAllToken::Scanner scanner;
-  scanner.set_source(body);
-
-  while (!scanner.is_at_end())
-  {
-   m_token_stream.push_back(scanner.scan_token());
-  }
  }
 
  [[nodiscard]] auto apply(
