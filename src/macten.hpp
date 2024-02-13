@@ -20,6 +20,9 @@ class MactenWriter;
 
 /**
  * Declarative Macro.
+ * 
+ * This template structure contains all of the vital information 
+ * needed in order to perform macro substitution.
  */
 struct DeclarativeTemplate
 {
@@ -28,8 +31,12 @@ private:
 
 public:
 
+ // Default Ctor.
  DeclarativeTemplate() = default;
 
+ // Ctor.
+ //
+ // Constructs and returns a new declartive template with the given name and body.
  explicit DeclarativeTemplate(std::string name, const std::string& body, std::vector<std::string> args = {})
  : m_name(name)
  , m_arguments(args)
@@ -158,8 +165,19 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
 
       if (token.is(MactenAllToken::Newline))
       {
-        auto _ = token_stream_view.consume(MactenAllToken::Tab, MactenAllToken::Space);
-        _ = token_stream_view.consume(MactenAllToken::Tab, MactenAllToken::Space);
+        // Optional skip twice to take into account the indentation of the macro body.
+        // WARN: At the moment, this would break if the prefix spacing is inconsistent.
+        // WARN: If you are using an editor which converts tabs into multiple spaces,
+        //       the result of the macro body will be incorrect.
+        // TODO: Work out a better scheme and fix this. One possibility is to book mark the 
+        //       indentation characters used before the first line of the body and of the macro.
+        //       this simply skip the book marked amount when scanning subsequent lines. This solution
+        //       is not exactly idea either because there might be cases where the user might want to
+        //       write a simple single line macro. Perhaps a logging system should be implemented and
+        //       emit a warning. This would work great because currently the project is lacking logging
+        //       and error reporting capabilities.
+        static_cast<void>(token_stream_view.consume(MactenAllToken::Tab, MactenAllToken::Space));
+        static_cast<void>(token_stream_view.consume(MactenAllToken::Tab, MactenAllToken::Space));
       }
 
       token_stream_result.push_back(token);
