@@ -103,6 +103,9 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
    }
 
  private:
+  /**
+   * Keep consuming while the current token is a tab.
+   */
   auto skip_whitespace() noexcept -> void
   {
    while (check(Token::Tab))
@@ -110,7 +113,10 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
      advance();
    }
   }
-
+ 
+  /**
+   * Parse declartions.
+   */
   auto declaration() noexcept -> void 
   {
    if (match(Token::DeclarativeDefinition))
@@ -186,7 +192,6 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
      // std::cout << "\n===================================================\n";
 
      advance();
-
      consume(Token::RBrace, "Expected '}' the end of macro body, found: " + previous.lexeme);
      m_macros.emplace_back(macro_name, macro_body, macro_args);
      return;
@@ -217,6 +222,9 @@ public:
  {
  }
 
+ /**
+  * Generate declarative macro rules from source.
+  */
  auto generate_declarative_rules() -> bool
  {
   DeclarativeMacroParser parser(m_source_path);
@@ -230,6 +238,9 @@ public:
   return res;
  }
 
+ /**
+  * Checks wheter the macro with the given name exists.
+  */
  auto has_macro(const std::string& name) -> bool
  {
   return m_declarative_macro_rules.contains(name);

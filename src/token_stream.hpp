@@ -53,6 +53,11 @@ struct TokenStream
    {
    }
 
+   /**
+    * Construct a new token stream view. This constructor is intended to be used for creating a new
+    * token stream view slice. The start start_index and max_size can be specified to constrict the
+    * range of the view.
+    */
    TokenStreamView(std::size_t start_index, std::size_t max_size, const TokenStream* ts)
    : m_current_pointer{ start_index }
    , m_max_size{ max_size }
@@ -385,6 +390,9 @@ struct TokenStream
    return TokenStreamView(this);
  }
 
+ /**
+  * Clear the token stream view.
+  */
  auto clear() noexcept -> void 
  {
    m_tokens.clear();
