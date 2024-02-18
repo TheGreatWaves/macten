@@ -29,6 +29,7 @@ auto DeclarativeTemplate::apply(
     };
     const bool is_macro_call { macten::utils::is_macro_call(view) };
 
+
     const auto token = view.peek();
 
     if (is_arg)
@@ -52,9 +53,38 @@ auto DeclarativeTemplate::apply(
     }
     else if (is_macro_call & env->has_macro(token.lexeme))
     {
-      const auto args = view.between(MactenAllToken::LSquare, MactenAllToken::RSquare, false);
-      view.advance(args.remaining_size()+3);
-      if (!env->match_and_execute_macro(temp_buffer, token.lexeme, args.construct()))
+      auto arg_body = view.between(MactenAllToken::LSquare, MactenAllToken::RSquare, false);
+      view.advance(arg_body.remaining_size()+3);
+
+      std::stringstream args_string {};
+
+      while (!arg_body.is_at_end()) 
+      {
+        const bool is_arg { arg_body.match_sequence(TokenType::Dollar, TokenType::Identifier) };
+        const auto token = arg_body.peek();
+
+        if (is_arg)
+        {
+         const std::string argname = arg_body.peek(1).lexeme;
+         if (args.contains(argname))
+         {
+           arg_body.advance();
+           const std::string& arg_value = args[argname];
+           args_string << arg_value;
+         }
+         else
+         {
+           args_string << token.lexeme;
+         }
+        }
+        else
+        {
+         args_string << token.lexeme;
+        }
+        arg_body.advance();
+      }
+
+      if (!env->match_and_execute_macro(temp_buffer, token.lexeme, args_string.str()))
       {
        return false;
       }

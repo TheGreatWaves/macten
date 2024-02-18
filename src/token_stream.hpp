@@ -87,12 +87,12 @@ struct TokenStream
    *
    * NOTE: If the index is greater than the size of the view, EndOfFile will be returned.
    */
-  [[nodiscard]] auto peek(std::size_t offset = 0) const noexcept -> Token
+  [[nodiscard]] auto peek(std::size_t offset = 0) const noexcept -> const Token&
   {
     const bool invalid_target = m_target == nullptr;
-    if (invalid_target || is_at_end(offset)) return Token();
+    if (invalid_target || is_at_end(offset)) return m_eof_token;
 
-    return m_target->at(m_current_pointer + offset);
+    return m_target->m_tokens[m_current_pointer + offset];
   }
 
   /**
@@ -108,10 +108,10 @@ struct TokenStream
   }
 
   /**
-   * Returns true if the a given sequence is found, starting from the top.
+   * Returns true if the given sequence is found, starting from the top.
    */
   template <std::same_as<TokenType>... TokenTypes>
-  [[nodiscard]] auto match_sequence(TokenTypes... tokens)
+  [[nodiscard]] auto match_sequence(TokenTypes... tokens) const noexcept -> bool
   {
     std::size_t offset {0};
     return ((peek(offset++).type == tokens) && ...);
@@ -309,6 +309,8 @@ struct TokenStream
   std::size_t        m_current_pointer {0};
   std::size_t        m_initial_start_pointer {0};
   const TokenStream* m_target {nullptr};
+
+  inline static Token m_eof_token = Token();
  };
 
 
@@ -344,7 +346,12 @@ struct TokenStream
  /**
   * Returns the token at the specified index.
   */
- [[nodiscard]] auto at(std::size_t index) const -> Token 
+ [[nodiscard]] auto at(std::size_t index) const -> const Token&
+ {
+  return m_tokens.at(index);
+ }
+
+ [[nodiscard]] auto at(std::size_t index) -> Token&
  {
   return m_tokens.at(index);
  }

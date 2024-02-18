@@ -263,7 +263,25 @@ public:
  {
   while (!source_view.is_at_end())
   {
-   const auto token = source_view.peek();
+   auto token = source_view.peek();
+
+   while (source_view.match_sequence(TokenType::Identifier, TokenType::Underscore)) 
+   {
+    if (source_view.peek(2).is(TokenType::Identifier))
+    {
+     token.lexeme += "_" + source_view.peek(2).lexeme;
+     source_view.advance(2);
+    } 
+    else
+    {
+     while (source_view.peek(1).is(TokenType::Underscore))
+     {
+      token.lexeme += "_";
+      source_view.advance(1);
+     }
+    }
+   } 
+
    const bool macro_call_found = macten::utils::is_macro_call(source_view);
 
    if (macro_call_found && has_macro(token.lexeme))
