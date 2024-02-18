@@ -44,12 +44,18 @@ public:
  {
  }
 
+
  [[nodiscard]] auto apply(
      MactenWriter* env,
      const std::string& indentation,
      macten::TokenStream<MactenAllToken>& target, 
      std::map<std::string, std::string> args = {}
   ) const -> bool;
+
+ [[nodiscard]] auto map_args(const std::string& arg_body) const -> std::optional<std::map<std::string, std::string>>
+ {
+  return macten::utils::map_raw_args_string_to_names(this->m_arguments, arg_body);
+ }
 
  /**
   * Members.
@@ -185,7 +191,7 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
 
      token_stream_result.pop_back();
     
-     auto macro_body = token_stream_result.construct();
+     const auto macro_body = token_stream_result.construct();
 
      // std::cout << "\nMacro body:\n===================================================\n";
      // std::cout << macro_body;
@@ -213,6 +219,7 @@ class MactenWriter
 {
 private:
  using DeclarativeMacroRules = std::unordered_map<std::string, DeclarativeTemplate>;
+ using TokenType = MactenAllToken;
  inline static const std::map<std::string, std::string> EmptyArgList {};
 public:
 
@@ -249,65 +256,42 @@ public:
  /**
   * Apply macro rules.
   */
- auto apply_macro_rules(macten::TokenStream<MactenAllToken>& target, macten::TokenStream<MactenAllToken>& source) -> bool
+ auto apply_macro_rules(macten::TokenStream<MactenAllToken>& target, macten::TokenStream<MactenAllToken>::TokenStreamView& source_view) -> bool
  {
-  using TokenType = MactenAllToken;
-  auto source_view = source.get_view();
-
   while (!source_view.is_at_end())
   {
-   const auto token = source_view.pop();
+   const auto token = source_view.peek();
+   const bool macro_call_found = macten::utils::is_macro_call(source_view);
 
-   const auto macro_call_found = (token.is(TokenType::Identifier) 
-                               && source_view.match_sequence(TokenType::Exclamation, TokenType::LSquare))
-                               && m_declarative_macro_rules.contains(token.lexeme);
-
-   if (macro_call_found)
+   if (macro_call_found && has_macro(token.lexeme))
    {
-    // Count the whitespace to keep consistent indentation.
-    std::size_t ws_count {2};
-    std::size_t spacing_count {0};
-    while (!source_view.peek_back(ws_count).any_of(TokenType::Newline, TokenType::EndOfFile)) 
-    { 
-     spacing_count += source_view.peek_back(ws_count).lexeme.size();
-     ws_count++; 
-    }
-    std::string ws(spacing_count, ' ');
-
-    // std::cout << "Found macro call for : '" << token.lexeme << "'\n";
-
-    // Skip over '!' and '['.
-    source_view.advance(2);
-
-    const auto& macro_rule = m_declarative_macro_rules.at(token.lexeme);
-
-    const auto body_view { source_view.between(TokenType::LSquare, TokenType::RSquare) };
-    source_view.advance(body_view.remaining_size());
-
-    // Skip over ']'.
-    if (!source_view.consume(TokenType::RSquare))
+    const auto args = source_view.between(MactenAllToken::LSquare, MactenAllToken::RSquare, false);
+    if (!match_and_execute_macro(target, token.lexeme, args.construct()))
     {
-     std::cerr << "Macro call missing closing ']'.\n";
      return false;
     }
-
-    // Map arguments.
-    const auto arg_body = body_view.construct();
-    const auto args = macten::utils::map_raw_args_string_to_names(macro_rule.m_arguments, arg_body);
-
-    if (!macro_rule.apply(this, ws, target, args.value_or(EmptyArgList)))
-    {
-     std::cerr << "Failed to apply macro rule.\n";
-     return false;
-    }
-
-    continue;
+   }
+   else
+   {
+    // Default. Just push the token, no need to care.
+    target.push_back(token);
    }
 
-   target.push_back(token);
+   source_view.advance();
   }
 
   return true;
+ }
+
+ auto match_and_execute_macro(
+  macten::TokenStream<MactenAllToken>& target, 
+  const std::string& macro_name,
+  const std::string& args
+  ) -> bool
+ {
+    const DeclarativeTemplate macro_rule { this->m_declarative_macro_rules.at(macro_name) };
+    const auto args_mapping = macro_rule.map_args(args);
+    return !macro_rule.apply(this, "", target, args_mapping.value());
  }
 
  /**
@@ -444,7 +428,9 @@ public:
   // std::cout << source_tokens.construct();
   // std::cout << "\n======================================================\n";
 
-  const auto res = apply_macro_rules(result_tokens, source_tokens);
+  // Note: It's important that we get the view AFTER preprocess.
+  auto source_tokens_view = source_tokens.get_view();
+  const auto res = apply_macro_rules(result_tokens, source_tokens_view);
 
   std::cout << "Result\n======================================================\n";
   std::cout << result_tokens.construct();
