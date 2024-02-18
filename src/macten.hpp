@@ -266,6 +266,7 @@ public:
    if (macro_call_found && has_macro(token.lexeme))
    {
     const auto args = source_view.between(MactenAllToken::LSquare, MactenAllToken::RSquare, false);
+    source_view.advance(args.size());
     if (!match_and_execute_macro(target, token.lexeme, args.construct()))
     {
      return false;
@@ -291,7 +292,7 @@ public:
  {
     const DeclarativeTemplate macro_rule { this->m_declarative_macro_rules.at(macro_name) };
     const auto args_mapping = macro_rule.map_args(args);
-    return !macro_rule.apply(this, "", target, args_mapping.value());
+    return macro_rule.apply(this, "", target, args_mapping.value());
  }
 
  /**
@@ -387,8 +388,7 @@ public:
    }
    else if (token.is(TokenType::Identifier) 
         && m_declarative_macro_rules.contains(token.lexeme)
-        && source_view.match(TokenType::Exclamation)
-        && source_view.peek(1).is(TokenType::LSquare))
+        && source_view.match_sequence(TokenType::Exclamation, TokenType::LSquare))
    {
     processed_tokens.push_back(token);
     processed_tokens.push_back(source_view.peek(0));

@@ -60,6 +60,7 @@ struct TokenStream
     */
    TokenStreamView(std::size_t start_index, std::size_t max_size, const TokenStream* ts)
    : m_current_pointer{ start_index }
+   , m_initial_start_pointer{ start_index }
    , m_max_size{ max_size }
    , m_target{ ts }
    {
@@ -72,6 +73,14 @@ struct TokenStream
   {
    return (m_current_pointer + offset) >= m_max_size;
   }
+
+  /**
+   * Returns the number of tokens popped.
+   */
+  [[nodiscard]] auto popped_size() const noexcept -> std::size_t 
+   {
+    return m_current_pointer - m_initial_start_pointer;
+   }
 
   /**
    * Returns the top Token with an offset.
@@ -282,6 +291,7 @@ struct TokenStream
    */
   const std::size_t  m_max_size {0};
   std::size_t        m_current_pointer {0};
+  std::size_t        m_initial_start_pointer {0};
   const TokenStream* m_target {nullptr};
  };
 

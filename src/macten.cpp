@@ -1,5 +1,6 @@
 #include "macten.hpp"
 #include "token_stream.hpp"
+#include "utils.hpp"
 
 /**
  * Apply declarative template macro on the target token stream. This function returns the succcess status of the macro expansion.
@@ -25,9 +26,7 @@ auto DeclarativeTemplate::apply(
     const bool is_arg {
      view.match_sequence(TokenType::Dollar, TokenType::Identifier)
     };
-    const bool is_macro_call {
-     view.match_sequence(TokenType::Identifier, TokenType::Exclamation, TokenType::LSquare)
-    };
+    const bool is_macro_call { macten::utils::is_macro_call(view) };
 
     const auto token = view.peek();
 
@@ -37,12 +36,27 @@ auto DeclarativeTemplate::apply(
      if (args.contains(argname))
      {
        view.advance();
-       target.add_string(args[argname]);
+       const std::string& arg_value = args[argname];
+       const auto sub_ts = macten::TokenStream<MactenAllToken>::from_string(arg_value);
+       auto sub_view = sub_ts.get_view();
+
+       // A little ugly, but this is the best way to trim.
+       static_cast<void>(sub_view.consume(TokenType::Tab, TokenType::Space));
+       env->apply_macro_rules(target, sub_view);
      }
      else
      {
        target.push_back(token);
      }
+    }
+    else if (is_macro_call & env->has_macro(token.lexeme))
+    {
+      const auto args = view.between(MactenAllToken::LSquare, MactenAllToken::RSquare, false);
+      view.advance(args.remaining_size()+3);
+      if (!env->match_and_execute_macro(target, token.lexeme, args.construct()))
+      {
+       return false;
+      }
     }
     else 
     {
