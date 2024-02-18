@@ -367,6 +367,16 @@ struct TokenStream
  }
 
  /**
+  * Return the token at the back of the stream. Offset defaulted to 0.
+  */
+ auto peek_back(std::size_t offset = 0) -> Token
+ {
+  if (static_cast<int>(m_tokens.size()) - (offset + 1) < 0)
+   return Token();
+  return m_tokens[m_tokens.size() - (offset + 1)];
+ }
+
+ /**
   * Pop the last element.
   */
  auto pop_back() -> void
