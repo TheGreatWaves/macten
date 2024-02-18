@@ -77,6 +77,11 @@ namespace macten
 
    return mapping;
   }
+
+  inline auto is_macro_call(typename macten::TokenStream<MactenAllToken>::TokenStreamView& view) -> bool 
+  {
+   return view.match_sequence(MactenAllToken::Identifier, MactenAllToken::Exclamation, MactenAllToken::LSquare);
+  }
  }
 }
 
