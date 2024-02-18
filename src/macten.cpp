@@ -15,6 +15,7 @@ auto DeclarativeTemplate::apply(
 ) const -> bool 
  {
    using TokenType = MactenAllToken;
+   macten::TokenStream<MactenAllToken> temp_buffer;
 
    // Arity issue.
    if (args.size() != m_arguments.size()) return false;
@@ -42,29 +43,32 @@ auto DeclarativeTemplate::apply(
 
        // A little ugly, but this is the best way to trim.
        static_cast<void>(sub_view.consume(TokenType::Tab, TokenType::Space));
-       env->apply_macro_rules(target, sub_view);
+       env->apply_macro_rules(temp_buffer, sub_view);
      }
      else
      {
-       target.push_back(token);
+       temp_buffer.push_back(token);
      }
     }
     else if (is_macro_call & env->has_macro(token.lexeme))
     {
       const auto args = view.between(MactenAllToken::LSquare, MactenAllToken::RSquare, false);
       view.advance(args.remaining_size()+3);
-      if (!env->match_and_execute_macro(target, token.lexeme, args.construct()))
+      if (!env->match_and_execute_macro(temp_buffer, token.lexeme, args.construct()))
       {
        return false;
       }
     }
     else 
     {
-     target.push_back(token);
+     temp_buffer.push_back(token);
     }
 
     view.advance();
    }
+
+   auto temp_buffer_view = temp_buffer.get_view();
+   env->apply_macro_rules(target, temp_buffer_view);
 
    return true;
  }
