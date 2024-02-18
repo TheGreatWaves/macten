@@ -189,7 +189,10 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
       token_stream_result.push_back(token);
      }
 
-     token_stream_result.pop_back();
+     if (token_stream_result.peek_back().is(MactenAllToken::Newline)) 
+     {
+      token_stream_result.pop_back();
+     }
     
      const auto macro_body = token_stream_result.construct();
 
