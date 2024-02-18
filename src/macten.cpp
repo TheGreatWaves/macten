@@ -29,36 +29,28 @@ auto DeclarativeTemplate::apply(
      view.match_sequence(TokenType::Identifier, TokenType::Exclamation, TokenType::LSquare)
     };
 
-    const auto token = view.pop();
+    const auto token = view.peek();
 
-    if (token.is(TokenType::Newline))
+    if (is_arg)
     {
-     target.push_back(token);
-     target.add_string(indentation);
-     continue;
-    }
-    else if (is_macro_call && env->has_macro(token.lexeme))
-    {
-     continue;
-    }
-    else if (is_arg)
-    {
-     const std::string argname = view.peek().lexeme;
-     view.advance();
-
+     const std::string argname = view.peek(1).lexeme;
      if (args.contains(argname))
      {
-      target.add_string(args[argname]);
+       view.advance();
+       target.add_string(args[argname]);
      }
      else
      {
-      std::cerr << "Failed to substitute argument name '" << argname << "'\n";
-      return false;
+       target.push_back(token);
      }
-     continue;
+    }
+    else 
+    {
+     target.push_back(token);
     }
 
-    target.push_back(token);
+    view.advance();
    }
+
    return true;
  }
