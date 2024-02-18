@@ -239,6 +239,22 @@ struct TokenStream
    };
   }
 
+  /**
+   * Starting from the current point, scan until the specified token type is found. 
+   * Return a new view which holds all of the tokens before the given point.
+   */
+  auto skip_until(TokenType token_type) -> void
+  {
+   std::size_t offset {0};
+
+   while (!peek(offset).is(token_type))
+   {
+    offset++;
+   }
+
+   m_current_pointer += offset;
+  }
+
  /**
   * Retrieve the stream of tokens in the scope created by the head/tail pair.
   * Note: You are expected to have passed the head token when this is called. If not, `in_scope` can be denoted to false to capture the next occurence of the scope.

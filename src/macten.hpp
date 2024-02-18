@@ -268,8 +268,12 @@ public:
 
    if (macro_call_found && has_macro(token.lexeme))
    {
-    const auto args = source_view.between(MactenAllToken::LSquare, MactenAllToken::RSquare, false);
-    source_view.advance(args.size());
+    // Move onto the '['.
+    source_view.skip_until(TokenType::LSquare);
+    if (!source_view.consume(TokenType::LSquare)) return false;
+
+    const auto args = source_view.between(MactenAllToken::LSquare, MactenAllToken::RSquare);
+    source_view.advance(args.remaining_size());
     if (!match_and_execute_macro(target, token.lexeme, args.construct()))
     {
      return false;
