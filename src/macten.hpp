@@ -414,6 +414,13 @@ public:
  {
     const DeclarativeTemplate macro_rule { this->m_declarative_macro_rules.at(macro_name) };
     const auto args_mapping = macro_rule.map_args(args);
+
+    if (!args_mapping.has_value())
+    {
+     std::cerr << "Failed to create argument mapping for macro '" << macro_name << "'\n";
+     return false;
+    }
+
     return macro_rule.apply(this, "", target, args_mapping.value());
  }
 
