@@ -119,6 +119,37 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
      advance();
    }
   }
+
+  /**
+   * Return a vector of tokens expected by the argument list that
+   * is currently being parsed.
+   * 
+   * // Note: Head token should be LParen '('.
+   */
+  auto parse_args() noexcept -> std::pair<std::vector<std::string>, std::vector<MactenAllToken>>
+  {
+   std::vector<MactenAllToken> macro_tokens {};
+   std::vector<std::string> macro_args {};
+
+   while(!match(Token::RParen))
+   {
+    if (match(Token::Dollar))
+    {
+     consume(Token::Identifier, "Expected argument name.");
+     const auto arg_name = previous.lexeme;
+     macro_args.push_back(arg_name);
+     macro_tokens.push_back(MactenAllToken::Scanner::strtok(arg_name).type);
+    }
+    else
+    {
+      advance();
+      const auto consumed = previous.lexeme;
+      macro_tokens.push_back(MactenAllToken::Scanner::strtok(consumed).type);
+    }
+   }
+
+   return {std::move(macro_args), std::move(macro_tokens)};
+  }
  
   /**
    * Parse declartions.
@@ -135,22 +166,7 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
     // Parse arguments.
     consume(Token::LParen, "Expected arguments, missing '(', found: '" + previous.lexeme + "'.");
 
-
-    std::vector<std::string> macro_args;
-    while(!match(Token::RParen))
-    {
-     // Retrieve the first argument.
-     consume(Token::Identifier, "Expected argument name.");
-     const auto arg = previous.lexeme;
-     macro_args.push_back(arg);
-
-     while (match(Token::Comma))
-     {
-      consume(Token::Identifier, "Expected argument name.");
-      const auto arg = previous.lexeme;
-      macro_args.push_back(arg);
-     }
-    }
+    const auto [macro_args, macro_tokens] = parse_args();
 
     consume(Token::Equal, "Expected '='");
     consume(Token::GreaterThan, "Expected '>'");
