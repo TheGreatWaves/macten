@@ -1046,6 +1046,16 @@ struct SCANNER(TOKEN_CLASS_NAME)
 
     SCANNER(TOKEN_CLASS_NAME)() = default;
 
+
+    /**
+     * Convert string to token.
+     */
+    static auto strtok(const std::string& str) -> cpp20scanner::Token<TOKEN_CLASS_NAME>
+    {
+        SCANNER(TOKEN_CLASS_NAME) scanner {};
+        scanner.set_source(str);
+        return scanner.scan_token();
+    }
     
 
     void set_source(const std::string& source)
