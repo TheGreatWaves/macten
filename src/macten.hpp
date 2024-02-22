@@ -53,6 +53,9 @@ public:
      std::map<std::string, std::string> args = {}
   ) const -> bool;
 
+ /**
+  * Returns an argument to argument name match. If the argument match fails, none is returned.
+  */
  [[nodiscard]] auto map_args(const std::string& arg_body) const noexcept -> std::optional<std::map<std::string, std::string>>
  {
   const auto arg_tokens = macten::TokenStream<MactenToken>::from_string(arg_body);
@@ -66,6 +69,9 @@ public:
   return {};
  }
 
+ /**
+  * Check whether input token type stream matches the a pattern of the macro.
+  */
  [[nodiscard]] auto match(macten::TokenStream<MactenToken>::TokenStreamView input_view) const noexcept -> bool 
  {
   for (std::size_t idx = 0; idx < m_tokens_pattern.size(); idx++)
@@ -86,6 +92,9 @@ public:
   return true;
  }
 
+ /**
+  * Check whether input token type stream matches any pattern declared by the macro.
+  */
  [[nodiscard]] auto map_args(macten::TokenStream<MactenToken>::TokenStreamView input_view) const noexcept -> std::optional<std::map<std::string, std::string>>
  {
   std::map<std::string, std::string> mapping {};
