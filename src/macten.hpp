@@ -150,6 +150,72 @@ struct DeclarativeMacroDetail
 };
 
 
+struct DeclarativeMacroParameter
+{
+ enum class PatternMode
+ {
+  Normal,
+  Plus,
+  Asterisk,
+ };
+
+ DeclarativeMacroParameter(macten::TokenStream<MactenToken>::TokenStreamView parameter_view)
+ : pattern{}
+ , variadic_pattern{}
+ {
+  while (!parameter_view.is_at_end())
+  {
+   const auto token = parameter_view.pop();
+   pattern.push_back(token.type);
+
+   switch (token.type)
+   {
+    break; case MactenToken::Dollar:
+    {
+      if (parameter_view.peek().is(MactenToken::LParen))
+      {
+       
+      }
+      else
+      {
+       // We can skip over the identifier.
+       parameter_view.advance();
+      }
+      continue;
+    }
+    break; default:
+    {
+      pattern.push_back(token.type);
+    }
+   }
+  }
+ }
+
+ [[nodiscard]] auto match(macten::TokenStream<MactenToken>::TokenStreamView input) const noexcept -> bool
+ {
+  for (std::size_t idx = 0; idx < pattern.size(); idx++)
+  {
+   auto current_expected_token_type = pattern[idx];
+
+   if (current_expected_token_type == MactenToken::Dollar) 
+   {
+    idx += 1;
+    input.advance();
+    continue;
+   }
+
+   const auto current_token_type = input.pop().type;
+   if (current_token_type != current_expected_token_type) return false;
+  }
+
+  return true;
+ }
+
+ PatternMode              pattern_mode {};
+ std::vector<MactenToken> pattern {};
+ std::vector<MactenToken> variadic_pattern {};
+};
+
 class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanner, MactenToken>
 {
  private:
