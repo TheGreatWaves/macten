@@ -647,14 +647,14 @@ class BaseParser
     /**
      * Advance the current token.
      */
-    auto advance() noexcept -> void
+    auto advance(bool ignore_error = false) noexcept -> void
     {
         previous = current;
 
         while (true)
         {
             current = scanner.scan_token();
-            if (current.type != TokenType::Error)
+            if (current.type != TokenType::Error || ignore_error)
             {
                 break;
             }
@@ -704,7 +704,7 @@ class BaseParser
      */
     auto report_token_error(Token<TokenType> token) noexcept -> void
     {
-        auto message = "Unexpected token " + token.lexeme + '.';
+        auto message = "Unexpected token '" + token.lexeme + "'.";
         report_error(message);
     }
 
@@ -1231,7 +1231,7 @@ TOKEN(Identifier)
         }
         #undef CCASE
 
-        return error_token("Unexpected character.");
+        return error_token(("Unexpected character: '" + c) + std::string("'"));
     }
 
     /**
