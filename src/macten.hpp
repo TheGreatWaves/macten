@@ -60,8 +60,9 @@ struct DeclarativeMacroParameter
    {
     if (input.peek().is(MactenToken::LParen))
     {
+     input.advance();
      const auto body = input.between(MactenToken::LParen, MactenToken::RParen);
-     input.advance(body.remaining_size());
+     input.advance(body.remaining_size() + 1);
     }
     else
     {
@@ -88,7 +89,7 @@ struct DeclarativeMacroParameter
   return true;
  }
 
- [[nodiscard]] auto map_args(macten::TokenStream<MactenAllToken>::TokenStreamView input) const noexcept -> std::optional<std::map<std::string, std::string>>
+ [[nodiscard]] auto map_args(macten::TokenStream<MactenAllToken>::TokenStreamView& input) const noexcept -> std::optional<std::map<std::string, std::string>>
  {
   std::map<std::string, std::string> argmap {};
 
@@ -167,16 +168,20 @@ public:
  // Ctor.
  //
  // Constructs and returns a new declartive template with the given name and body.
- explicit DeclarativeTemplate(const std::string& name, const std::string& body, const DeclarativeMacroParameter& params)
+ explicit DeclarativeTemplate(const std::string& name, const std::vector<std::string>& body, const std::vector<DeclarativeMacroParameter>& parameters)
  : m_name(name)
- , m_params(params)
- , m_token_stream(macten::TokenStream<MactenAllToken>::from_string(body))
+ , m_params(parameters)
  {
+  for (const auto& s : body)
+  {
+   m_token_stream.push_back(macten::TokenStream<MactenAllToken>::from_string(s));
+  }
  }
 
 
  [[nodiscard]] auto apply(
      MactenWriter* env,
+     const int index,
      const std::string& indentation,
      macten::TokenStream<MactenAllToken>& target, 
      std::map<std::string, std::string> args = {}
@@ -185,28 +190,32 @@ public:
  /**
   * Returns an argument to argument name match. If the argument match fails, none is returned.
   */
- [[nodiscard]] auto map_args(const std::string& arg_body) const noexcept -> std::optional<std::map<std::string, std::string>>
+ [[nodiscard]] auto map_args(std::size_t index, 
+   macten::TokenStream<MactenAllToken>::TokenStreamView& arg_all_tokens_view) const noexcept -> std::optional<std::map<std::string, std::string>>
  {
-  const auto arg_tokens = macten::TokenStream<MactenToken>::from_string(arg_body);
-  auto arg_tokens_view = arg_tokens.get_view();
+  const auto& param = m_params.at(index);
+  return param.map_args(arg_all_tokens_view);
+ }
 
-  const auto arg_all_tokens = macten::TokenStream<MactenAllToken>::from_string(arg_body);
-  auto arg_all_tokens_view = arg_all_tokens.get_view();
-
-  if (m_params.match(arg_tokens_view))
+ [[nodiscard]] auto match(macten::TokenStream<MactenToken>::TokenStreamView view) const noexcept -> int 
+ {
+  for (int index {0}; index < m_params.size(); index++)
   {
-   return m_params.map_args(arg_all_tokens_view);
+   const auto& param = m_params[index];
+   if (param.match(view))
+   {
+    return index;
+   }
   }
-
-  return {};
+  return -1;
  }
 
  /**
   * Members.
   */
- std::string                         m_name;
- DeclarativeMacroParameter           m_params;
- macten::TokenStream<MactenAllToken> m_token_stream;
+ std::string                                      m_name;
+ std::vector<DeclarativeMacroParameter>           m_params;
+ std::vector<macten::TokenStream<MactenAllToken>> m_token_stream;
 };
 
 struct DeclarativeMacroDetail
@@ -219,9 +228,9 @@ struct DeclarativeMacroDetail
  /**
   * Members;
   */
- std::string                 m_name;
- std::string                 m_body;
- DeclarativeMacroParameter   m_params;
+ std::string                            m_name;
+ std::vector<std::string>               m_body;
+ std::vector<DeclarativeMacroParameter> m_params;
 };
 
 
@@ -325,75 +334,80 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
 
     consume(Token::LBrace, "Expected macro body, missing '{', found: '" + previous.lexeme + "'.");
 
-    const auto parameter_signature = this->scanner.scan_body(Token::LParen, Token::RParen);
-    const auto parameter_signature_stream = macten::TokenStream<MactenToken>::from_string(parameter_signature.lexeme);
-    const auto parameter_signature_view = parameter_signature_stream.get_view();
-    advance();
 
-    DeclarativeMacroParameter params(parameter_signature_view);
+    std::vector<std::string>               branch_bodies;
+    std::vector<DeclarativeMacroParameter> branch_parameters;
 
-    consume(Token::RParen, "Expected arguments, missing ')', found: '" + current.lexeme + "'.");
-
-    std::vector<std::string> macro_args {};
-    std::vector<MactenToken> macro_tokens {};
-
-    consume(Token::Equal, "Expected '=', found: '" + current.lexeme + "'.");
-    consume(Token::GreaterThan, "Expected '>'");
-
-    if (check(Token::LBrace))
+    while (!match(Token::RBrace))
     {
-     scanner.skip_whitespace();
-     auto macro_body_token = this->scanner.scan_body(Token::LBrace, Token::RBrace);
+     const auto parameter_signature = this->scanner.scan_body(Token::LParen, Token::RParen);
+     const auto parameter_signature_stream = macten::TokenStream<MactenToken>::from_string(parameter_signature.lexeme);
+     const auto parameter_signature_view = parameter_signature_stream.get_view();
+     advance();
+    
+     branch_parameters.emplace_back(parameter_signature_view);
 
-     auto token_stream = macten::TokenStream<MactenAllToken>::from_string(macro_body_token.lexeme);
-     auto token_stream_view = token_stream.get_view();
+     consume(Token::RParen, "Expected arguments, missing ')', found: '" + current.lexeme + "'.");
 
-     macten::TokenStream<MactenAllToken> token_stream_result;
+     std::vector<std::string> macro_args {};
+     std::vector<MactenToken> macro_tokens {};
 
-     while (!token_stream_view.is_at_end())
+     consume(Token::Equal, "Expected '=', found: '" + current.lexeme + "'.");
+     consume(Token::GreaterThan, "Expected '>'");
+
+     if (check(Token::LBrace))
      {
-      const auto token = token_stream_view.pop();
+      scanner.skip_whitespace();
+      auto macro_body_token = this->scanner.scan_body(Token::LBrace, Token::RBrace);
 
-      if (token.is(MactenAllToken::Newline))
+      auto token_stream = macten::TokenStream<MactenAllToken>::from_string(macro_body_token.lexeme);
+      auto token_stream_view = token_stream.get_view();
+
+      macten::TokenStream<MactenAllToken> token_stream_result;
+
+      while (!token_stream_view.is_at_end())
       {
-        // Optional skip twice to take into account the indentation of the macro body.
-        // WARN: At the moment, this would break if the prefix spacing is inconsistent.
-        // WARN: If you are using an editor which converts tabs into multiple spaces,
-        //       the result of the macro body will be incorrect.
-        // TODO: Work out a better scheme and fix this. One possibility is to book mark the 
-        //       indentation characters used before the first line of the body and of the macro.
-        //       this simply skip the book marked amount when scanning subsequent lines. This solution
-        //       is not exactly idea either because there might be cases where the user might want to
-        //       write a simple single line macro. Perhaps a logging system should be implemented and
-        //       emit a warning. This would work great because currently the project is lacking logging
-        //       and error reporting capabilities.
-        static_cast<void>(token_stream_view.consume(MactenAllToken::Tab, MactenAllToken::Space));
-        static_cast<void>(token_stream_view.consume(MactenAllToken::Tab, MactenAllToken::Space));
+       const auto token = token_stream_view.pop();
+
+       if (token.is(MactenAllToken::Newline))
+       {
+         // Optional skip twice to take into account the indentation of the macro body.
+         // WARN: At the moment, this would break if the prefix spacing is inconsistent.
+         // WARN: If you are using an editor which converts tabs into multiple spaces,
+         //       the result of the macro body will be incorrect.
+         // TODO: Work out a better scheme and fix this. One possibility is to book mark the 
+         //       indentation characters used before the first line of the body and of the macro.
+         //       this simply skip the book marked amount when scanning subsequent lines. This solution
+         //       is not exactly idea either because there might be cases where the user might want to
+         //       write a simple single line macro. Perhaps a logging system should be implemented and
+         //       emit a warning. This would work great because currently the project is lacking logging
+         //       and error reporting capabilities.
+         static_cast<void>(token_stream_view.consume(MactenAllToken::Tab, MactenAllToken::Space));
+         static_cast<void>(token_stream_view.consume(MactenAllToken::Tab, MactenAllToken::Space));
+       }
+
+       token_stream_result.push_back(token);
       }
 
-      token_stream_result.push_back(token);
-     }
-
-     if (token_stream_result.peek_back().is(MactenAllToken::Newline)) 
-     {
-      token_stream_result.pop_back();
-     }
+      if (token_stream_result.peek_back().is(MactenAllToken::Newline)) 
+      {
+       token_stream_result.pop_back();
+      }
     
-     const auto macro_body = token_stream_result.construct();
+      branch_bodies.emplace_back(token_stream_result.construct());
 
      // std::cout << "\nMacro body:\n===================================================\n";
      // std::cout << macro_body;
      // std::cout << "\n===================================================\n";
+      advance();
+      advance();
+    }
 
-     advance();
-     consume(Token::RBrace, "Expected '}' the end of macro body, found: " + previous.lexeme);
+    }
      m_macros.emplace_back(
       std::move(macro_name), 
-      std::move(macro_body), 
-      std::move(params));
-     return;
-    }
-    report_error("Expected macro body, missing '{'");
+      std::move(branch_bodies), 
+      std::move(branch_parameters));
    }
    else
    {
@@ -480,6 +494,7 @@ public:
 
     const auto args = source_view.between(MactenAllToken::LSquare, MactenAllToken::RSquare);
     source_view.advance(args.remaining_size());
+
     if (!match_and_execute_macro(target, token.lexeme, args.construct()))
     {
      return false;
@@ -504,15 +519,46 @@ public:
   ) -> bool
  {
     const DeclarativeTemplate macro_rule { this->m_declarative_macro_rules.at(macro_name) };
-    const auto args_mapping = macro_rule.map_args(args);
 
-    if (!args_mapping.has_value())
+    const auto all_token_stream = macten::TokenStream<MactenAllToken>::from_string(args);
+    auto all_token_stream_view = all_token_stream.get_view();
+
+    while (!all_token_stream_view.is_at_end())
     {
-     std::cerr << "Failed to create argument mapping for macro '" << macro_name << "'\n";
-     return false;
-    }
+     const auto token_stream = macten::TokenStream<MactenToken>::from_string(all_token_stream_view.construct());
+     auto token_stream_view = token_stream.get_view();
 
-    return macro_rule.apply(this, "", target, args_mapping.value());
+     // Find match.
+     const int idx = macro_rule.match(token_stream_view);
+     if (idx == -1) return false;
+
+     auto args_mapping = macro_rule.map_args(idx, all_token_stream_view);
+
+     if (!args_mapping.has_value())
+     {
+      std::cerr << "Failed to create argument mapping for macro '" << macro_name << "'\n";
+      return false;
+     }
+
+     // Try to expand whatever we can inside our args mapping.
+     for (auto& [key, value]: args_mapping.value())
+     {
+       macten::TokenStream<MactenAllToken> temp{};
+       if (match_and_execute_macro(temp, macro_name, value))
+       {
+        value = temp.construct();
+       }
+     }
+
+     bool success = macro_rule.apply(this, idx, "", target, args_mapping.value());
+     if (!success) return false;
+
+     while (all_token_stream_view.peek().any_of(MactenAllToken::Newline))
+     {
+       target.push_back(all_token_stream_view.pop());
+     }
+    }
+    return true;
  }
 
  /**
@@ -642,7 +688,7 @@ public:
   // std::cout << source_tokens.construct();
   // std::cout << "\n======================================================\n";
 
-  source_tokens = preprocess(source_tokens);
+  // source_tokens = preprocess(source_tokens);
 
   // std::cout << "After preprocess\n======================================================\n";
   // std::cout << source_tokens.construct();

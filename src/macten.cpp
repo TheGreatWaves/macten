@@ -9,6 +9,7 @@
  */
 auto DeclarativeTemplate::apply(
      MactenWriter* env,
+     const int index,
      const std::string& indentation,
      macten::TokenStream<MactenAllToken>& target, 
      std::map<std::string, std::string> args
@@ -18,9 +19,9 @@ auto DeclarativeTemplate::apply(
    macten::TokenStream<MactenAllToken> temp_buffer;
 
    // Arity issue.
-   if (args.size() != m_params.argument_names.size()) return false;
+   if (args.size() != m_params[index].argument_names.size()) return false;
 
-   auto view = m_token_stream.get_view();
+   auto view = m_token_stream[index].get_view();
 
    while (!view.is_at_end())
    {
