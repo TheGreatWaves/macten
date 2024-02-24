@@ -33,7 +33,7 @@ struct DeclarativeMacroParameter
   while (!parameter_view.is_at_end())
   {
    const auto token = parameter_view.pop();
-   pattern.push_back(token.type);
+   pattern.push_back(token);
 
     if (token.is(MactenToken::Dollar))
     {
@@ -54,9 +54,9 @@ struct DeclarativeMacroParameter
  {
   for (std::size_t idx = 0; idx < pattern.size(); idx++)
   {
-   const auto current_expected_token_type = pattern[idx];
+   const auto current_expected_token = pattern[idx];
 
-   if (current_expected_token_type == MactenToken::Dollar) 
+   if (current_expected_token.type == MactenToken::Dollar) 
    {
     if (input.peek().is(MactenToken::LParen))
     {
@@ -73,15 +73,15 @@ struct DeclarativeMacroParameter
    const auto token = input.pop();
    const auto current_token_type = token.type;
 
-   if (current_token_type != current_expected_token_type)
+   if (current_token_type != current_expected_token.type)
    {
     return false;
    }
 
-   // TODO: match lexeme.
-   if (current_token_type == MactenToken::Identifier)
+   // Lexeme (keyword) mismatch.
+   if (current_expected_token.type == MactenToken::Identifier && token.lexeme != current_expected_token.lexeme)
    {
-    
+    return false;
    }
   }
 
@@ -94,8 +94,9 @@ struct DeclarativeMacroParameter
 
   std::size_t argcount {0};
 
-  for (const MactenToken& expected_tty : pattern)
+  for (const auto& expected : pattern)
   {
+   const auto& expected_tty = expected.type;
    input.skip(MactenAllToken::Newline, MactenAllToken::Tab, MactenAllToken::Space);
    const auto token = input.pop();
 
@@ -139,10 +140,10 @@ struct DeclarativeMacroParameter
   return argmap;
  }
 
- PatternMode              pattern_mode {};
- std::vector<MactenToken> pattern {};
- std::vector<std::string> argument_names {};
- std::vector<MactenToken> variadic_pattern {};
+ PatternMode                                   pattern_mode {};
+ std::vector<cpp20scanner::Token<MactenToken>> pattern {};
+ std::vector<std::string>                      argument_names {};
+ std::vector<cpp20scanner::Token<MactenToken>> variadic_pattern {};
 };
 
 class MactenWriter;
