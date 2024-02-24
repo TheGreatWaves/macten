@@ -15,6 +15,135 @@
 #include "macten_tokens.hpp"
 #include "macten_all_tokens.hpp"
 
+struct DeclarativeMacroParameter
+{
+ enum class PatternMode
+ {
+  Normal,
+  Plus,
+  Asterisk,
+ };
+
+ DeclarativeMacroParameter() = default;
+
+ DeclarativeMacroParameter(macten::TokenStream<MactenToken>::TokenStreamView parameter_view)
+ : pattern{}
+ , variadic_pattern{}
+ {
+  while (!parameter_view.is_at_end())
+  {
+   const auto token = parameter_view.pop();
+   pattern.push_back(token.type);
+
+    if (token.is(MactenToken::Dollar))
+    {
+      if (parameter_view.peek().is(MactenToken::Identifier))
+      {
+       argument_names.push_back(parameter_view.pop().lexeme);
+      }
+      else
+      {
+       std::cerr << "Expected variable name after '$' symbol." << '\n';
+      }
+    }
+  }
+ }
+
+
+ [[nodiscard]] auto match(macten::TokenStream<MactenToken>::TokenStreamView input) const noexcept -> bool
+ {
+  for (std::size_t idx = 0; idx < pattern.size(); idx++)
+  {
+   const auto current_expected_token_type = pattern[idx];
+
+   if (current_expected_token_type == MactenToken::Dollar) 
+   {
+    if (input.peek().is(MactenToken::LParen))
+    {
+     const auto body = input.between(MactenToken::LParen, MactenToken::RParen);
+     input.advance(body.remaining_size());
+    }
+    else
+    {
+     input.advance();
+    }
+    continue;
+   }
+
+   const auto token = input.pop();
+   const auto current_token_type = token.type;
+
+   if (current_token_type != current_expected_token_type)
+   {
+    return false;
+   }
+
+   // TODO: match lexeme.
+   if (current_token_type == MactenToken::Identifier)
+   {
+    
+   }
+  }
+
+  return true;
+ }
+
+ [[nodiscard]] auto map_args(macten::TokenStream<MactenAllToken>::TokenStreamView input) const noexcept -> std::optional<std::map<std::string, std::string>>
+ {
+  std::map<std::string, std::string> argmap {};
+
+  std::size_t argcount {0};
+
+  for (const MactenToken& expected_tty : pattern)
+  {
+   input.skip(MactenAllToken::Newline, MactenAllToken::Tab, MactenAllToken::Space);
+   const auto token = input.pop();
+
+   if (expected_tty == MactenToken::Dollar)
+   {
+    // Arity error.
+    if ((argcount+1) > argument_names.size())
+    {
+      std::cerr << "Arity error, declared parameter count mismatched.\n";
+      return {};
+    }
+
+    std::string argval {};
+    const std::string& argname = argument_names[argcount];
+
+    // Handle grouping.
+    if (token.is(MactenAllToken::LParen))
+    {
+     const auto expr = input.between(MactenAllToken::LParen, MactenAllToken::RParen);
+     input.advance(expr.remaining_size() + 1);
+     argval = expr.construct();
+    }
+    else
+    {
+     argval = token.lexeme;
+    }
+
+    argmap[argname] = argval;
+
+    argcount++;
+   }
+   else
+   {
+    if (token.type.name() != expected_tty.name())
+    {
+     return {};
+    }
+   }
+  }
+
+  return argmap;
+ }
+
+ PatternMode              pattern_mode {};
+ std::vector<MactenToken> pattern {};
+ std::vector<std::string> argument_names {};
+ std::vector<MactenToken> variadic_pattern {};
+};
 
 class MactenWriter;
 
