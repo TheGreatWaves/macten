@@ -18,7 +18,7 @@ auto DeclarativeTemplate::apply(
    macten::TokenStream<MactenAllToken> temp_buffer;
 
    // Arity issue.
-   if (args.size() != m_arguments.size()) return false;
+   if (args.size() != m_params.argument_names.size()) return false;
 
    auto view = m_token_stream.get_view();
 
