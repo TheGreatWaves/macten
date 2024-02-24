@@ -166,10 +166,9 @@ public:
  // Ctor.
  //
  // Constructs and returns a new declartive template with the given name and body.
- explicit DeclarativeTemplate(const std::string& name, const std::string& body, std::vector<MactenToken> pattern, std::vector<std::string> args = {})
+ explicit DeclarativeTemplate(const std::string& name, const std::string& body, const DeclarativeMacroParameter& params)
  : m_name(name)
- , m_arguments(args)
- , m_tokens_pattern(pattern)
+ , m_params(params)
  , m_token_stream(macten::TokenStream<MactenAllToken>::from_string(body))
  {
  }
@@ -190,75 +189,22 @@ public:
   const auto arg_tokens = macten::TokenStream<MactenToken>::from_string(arg_body);
   auto arg_tokens_view = arg_tokens.get_view();
 
-  if (match(arg_tokens_view))
+  const auto arg_all_tokens = macten::TokenStream<MactenAllToken>::from_string(arg_body);
+  auto arg_all_tokens_view = arg_all_tokens.get_view();
+
+  if (m_params.match(arg_tokens_view))
   {
-   return map_args(arg_tokens_view);
+   return m_params.map_args(arg_all_tokens_view);
   }
 
   return {};
  }
 
  /**
-  * Check whether input token type stream matches the a pattern of the macro.
-  */
- [[nodiscard]] auto match(macten::TokenStream<MactenToken>::TokenStreamView input_view) const noexcept -> bool 
- {
-  for (std::size_t idx = 0; idx < m_tokens_pattern.size(); idx++)
-  {
-   auto current_expected_token_type = m_tokens_pattern[idx];
-
-   if (current_expected_token_type == MactenToken::Dollar) 
-   {
-    idx += 1;
-    input_view.advance();
-    continue;
-   }
-
-   const auto current_token_type = input_view.pop().type;
-   if (current_token_type != current_expected_token_type) return false;
-  }
-
-  return true;
- }
-
- /**
-  * Check whether input token type stream matches any pattern declared by the macro.
-  */
- [[nodiscard]] auto map_args(macten::TokenStream<MactenToken>::TokenStreamView input_view) const noexcept -> std::optional<std::map<std::string, std::string>>
- {
-  std::map<std::string, std::string> mapping {};
-
-  std::size_t argcount {0};
-
-  for (std::size_t idx = 0; idx < m_tokens_pattern.size(); idx++)
-  {
-   auto current_expected_token_type = m_tokens_pattern[idx];
-   const auto current_token = input_view.pop();
-
-   if (current_expected_token_type == MactenToken::Dollar) 
-   {
-    if (argcount + 1 > m_arguments.size()) return {};
-
-    mapping[m_arguments[argcount]] = current_token.lexeme;
-    argcount++;
-    idx++;
-
-    continue;
-   }
-
-   if (current_token.type != current_expected_token_type) return {};
-  }
-
-
-  return mapping;
- }
-
- /**
   * Members.
   */
  std::string                         m_name;
- std::vector<std::string>            m_arguments;
- std::vector<MactenToken>            m_tokens_pattern;
+ DeclarativeMacroParameter           m_params;
  macten::TokenStream<MactenAllToken> m_token_stream;
 };
 
@@ -266,7 +212,7 @@ struct DeclarativeMacroDetail
 {
  auto construct_template() const -> DeclarativeTemplate
  {
-  return DeclarativeTemplate(m_name, m_body, m_pattern,  m_args);
+  return DeclarativeTemplate(m_name, m_body, m_params);
  }
 
  /**
@@ -274,76 +220,10 @@ struct DeclarativeMacroDetail
   */
  std::string                 m_name;
  std::string                 m_body;
- std::vector<std::string>    m_args;
- std::vector<MactenToken>    m_pattern;
+ DeclarativeMacroParameter   m_params;
 };
 
 
-struct DeclarativeMacroParameter
-{
- enum class PatternMode
- {
-  Normal,
-  Plus,
-  Asterisk,
- };
-
- DeclarativeMacroParameter(macten::TokenStream<MactenToken>::TokenStreamView parameter_view)
- : pattern{}
- , variadic_pattern{}
- {
-  while (!parameter_view.is_at_end())
-  {
-   const auto token = parameter_view.pop();
-   pattern.push_back(token.type);
-
-   switch (token.type)
-   {
-    break; case MactenToken::Dollar:
-    {
-      if (parameter_view.peek().is(MactenToken::LParen))
-      {
-       
-      }
-      else
-      {
-       // We can skip over the identifier.
-       parameter_view.advance();
-      }
-      continue;
-    }
-    break; default:
-    {
-      pattern.push_back(token.type);
-    }
-   }
-  }
- }
-
- [[nodiscard]] auto match(macten::TokenStream<MactenToken>::TokenStreamView input) const noexcept -> bool
- {
-  for (std::size_t idx = 0; idx < pattern.size(); idx++)
-  {
-   auto current_expected_token_type = pattern[idx];
-
-   if (current_expected_token_type == MactenToken::Dollar) 
-   {
-    idx += 1;
-    input.advance();
-    continue;
-   }
-
-   const auto current_token_type = input.pop().type;
-   if (current_token_type != current_expected_token_type) return false;
-  }
-
-  return true;
- }
-
- PatternMode              pattern_mode {};
- std::vector<MactenToken> pattern {};
- std::vector<MactenToken> variadic_pattern {};
-};
 
 class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanner, MactenToken>
 {
@@ -444,12 +324,19 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
 
     consume(Token::LBrace, "Expected macro body, missing '{', found: '" + previous.lexeme + "'.");
 
-    // Parse arguments.
-    consume(Token::LParen, "Expected arguments, missing '(', found: '" + previous.lexeme + "'.");
+    const auto parameter_signature = this->scanner.scan_body(Token::LParen, Token::RParen);
+    const auto parameter_signature_stream = macten::TokenStream<MactenToken>::from_string(parameter_signature.lexeme);
+    const auto parameter_signature_view = parameter_signature_stream.get_view();
+    advance();
 
-    const auto [macro_args, macro_tokens] = parse_args();
+    DeclarativeMacroParameter params(parameter_signature_view);
 
-    consume(Token::Equal, "Expected '='");
+    consume(Token::RParen, "Expected arguments, missing ')', found: '" + current.lexeme + "'.");
+
+    std::vector<std::string> macro_args {};
+    std::vector<MactenToken> macro_tokens {};
+
+    consume(Token::Equal, "Expected '=', found: '" + current.lexeme + "'.");
     consume(Token::GreaterThan, "Expected '>'");
 
     if (check(Token::LBrace))
@@ -502,15 +389,14 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
      m_macros.emplace_back(
       std::move(macro_name), 
       std::move(macro_body), 
-      std::move(macro_args), 
-      std::move(macro_tokens));
+      std::move(params));
      return;
     }
     report_error("Expected macro body, missing '{'");
    }
    else
    {
-    advance();
+    advance(true);
    }
   }
  public: 
