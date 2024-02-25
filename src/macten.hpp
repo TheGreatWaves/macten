@@ -30,6 +30,7 @@ struct DeclarativeMacroParameter
  : pattern{}
  , variadic_pattern{}
  {
+  // Populate pattern and argument names.
   while (!parameter_view.is_at_end())
   {
    const auto token = parameter_view.pop();
@@ -50,6 +51,9 @@ struct DeclarativeMacroParameter
  }
 
 
+ /**
+  * Checks whether the input token stream matches the pattern of the expected parameters or not.
+  */
  [[nodiscard]] auto match(macten::TokenStream<MactenToken>::TokenStreamView input) const noexcept -> bool
  {
   for (std::size_t idx = 0; idx < pattern.size(); idx++)
@@ -89,6 +93,9 @@ struct DeclarativeMacroParameter
   return true;
  }
 
+ /**
+  * Match pattern with the input and retrieve argument names and their value.
+  */
  [[nodiscard]] auto map_args(macten::TokenStream<MactenAllToken>::TokenStreamView& input) const noexcept -> std::optional<std::map<std::string, std::string>>
  {
   std::map<std::string, std::string> argmap {};
