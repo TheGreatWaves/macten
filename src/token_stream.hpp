@@ -394,7 +394,7 @@ struct TokenStream
   */
  auto peek_back(std::size_t offset = 0) -> Token
  {
-  if (static_cast<int>(m_tokens.size()) - (offset + 1) < 0)
+  if (static_cast<int>(m_tokens.size()) - (static_cast<int>(offset) + 1) < 0)
    return Token();
   return m_tokens[m_tokens.size() - (offset + 1)];
  }
