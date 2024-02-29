@@ -547,16 +547,6 @@ public:
       return false;
      }
 
-     // Try to expand whatever we can inside our args mapping.
-     for (auto& [key, value]: args_mapping.value())
-     {
-       macten::TokenStream<MactenAllToken> temp{};
-       if (match_and_execute_macro(temp, macro_name, value))
-       {
-        value = temp.construct();
-       }
-     }
-
      bool success = macro_rule.apply(this, idx, "", target, args_mapping.value());
      if (!success) return false;
 
