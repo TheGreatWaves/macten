@@ -28,28 +28,104 @@ struct DeclarativeMacroParameter
 
  DeclarativeMacroParameter(macten::TokenStream<MactenToken>::TokenStreamView parameter_view)
  : pattern{}
+ , pattern_mode(PatternMode::Normal)
  , variadic_pattern{}
  {
   // Populate pattern and argument names.
   while (!parameter_view.is_at_end())
   {
    const auto token = parameter_view.pop();
-   pattern.push_back(token);
 
     if (token.is(MactenToken::Dollar))
     {
       if (parameter_view.peek().is(MactenToken::Identifier))
       {
        argument_names.push_back(parameter_view.pop().lexeme);
+       pattern.push_back(token);
+      }
+      else if (parameter_view.peek().is(MactenToken::LParen))
+      {
+       pattern_mode = PatternMode::Asterisk;
+
+       parameter_view.advance();
+       auto pview = parameter_view.between(MactenToken::LParen, MactenToken::RParen);
+
+
+       parameter_view.advance(pview.remaining_size() + 1);
+
+       while (!pview.is_at_end())
+       {
+        const auto& token = pview.peek();
+
+        if (token.is(MactenToken::Dollar))
+        {
+         variadic_pattern.push_back(pview.pop());
+
+         // Get the variadic container name.
+         variadic_container_name = pview.pop().lexeme;
+        }
+        else
+        {
+         variadic_pattern.push_back(pview.pop());
+        }
+       }
       }
       else
       {
        std::cerr << "Expected variable name after '$' symbol." << '\n';
       }
     }
+    else
+    {
+     pattern.push_back(token);
+    }
   }
  }
 
+ [[nodiscard]] auto match_variadic(macten::TokenStream<MactenToken>::TokenStreamView input) const noexcept -> bool
+ {
+  if (pattern_mode == PatternMode::Normal) return true;
+
+  if (input.is_at_end()) return false;
+
+  while (!input.peek().is(MactenToken::EndOfFile))
+  {
+   for (std::size_t idx = 0; idx < variadic_pattern.size(); idx++)
+   {
+    const auto current_expected_token = variadic_pattern[idx];
+
+    if (current_expected_token.is(MactenToken::Dollar)) 
+    {
+     if (input.peek().is(MactenToken::LParen))
+     {
+      input.advance();
+      const auto body = input.between(MactenToken::LParen, MactenToken::RParen);
+      input.advance(body.remaining_size() + 1);
+     }
+     else
+     {
+      input.advance();
+     }
+     continue;
+    }
+
+    const auto token = input.pop();
+    const auto current_token_type = token.type;
+    if (current_token_type != current_expected_token.type)
+    {
+     return false;
+    }
+
+    // Lexeme (keyword) mismatch.
+    if (current_expected_token.type == MactenToken::Identifier && token.lexeme != current_expected_token.lexeme)
+    {
+     return false;
+    }
+   }
+  }
+
+  return true;
+ }
 
  /**
   * Checks whether the input token stream matches the pattern of the expected parameters or not.
@@ -78,8 +154,11 @@ struct DeclarativeMacroParameter
    const auto token = input.pop();
    const auto current_token_type = token.type;
 
+
    if (current_token_type != current_expected_token.type)
    {
+    // For debugging, remove this later.
+    std::cerr << "[DEBUG - match] "<< current_token_type.name() << " != " << current_expected_token.type.name() << '\n';
     return false;
    }
 
@@ -90,7 +169,15 @@ struct DeclarativeMacroParameter
    }
   }
 
-  return true;
+  // There is more to match, however we only expect a finite number of arguments.
+  if (pattern_mode == PatternMode::Normal && !input.peek().is(MactenToken::EndOfFile)) 
+  {
+   return false;
+  }
+
+
+
+  return match_variadic(input);
  }
 
  /**
@@ -145,12 +232,20 @@ struct DeclarativeMacroParameter
    }
   }
 
+  if (pattern_mode != PatternMode::Normal)
+  {
+   argmap[variadic_container_name] = input.construct();
+
+   while (!input.is_at_end()) input.advance();
+  }
+
   return argmap;
  }
 
  PatternMode                                   pattern_mode {};
  std::vector<cpp20scanner::Token<MactenToken>> pattern {};
  std::vector<std::string>                      argument_names {};
+ std::string                                   variadic_container_name{};
  std::vector<cpp20scanner::Token<MactenToken>> variadic_pattern {};
 };
 
@@ -185,7 +280,6 @@ public:
   }
  }
 
-
  [[nodiscard]] auto apply(
      MactenWriter* env,
      const int index,
@@ -208,6 +302,7 @@ public:
  {
   for (int index {0}; index < m_params.size(); index++)
   {
+
    const auto& param = m_params[index];
    if (param.match(view))
    {
@@ -355,6 +450,7 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
      branch_parameters.emplace_back(parameter_signature_view);
 
      consume(Token::RParen, "Expected arguments, missing ')', found: '" + current.lexeme + "'.");
+    
 
      std::vector<std::string> macro_args {};
      std::vector<MactenToken> macro_tokens {};
@@ -366,6 +462,7 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
      {
       scanner.skip_whitespace();
       auto macro_body_token = this->scanner.scan_body(Token::LBrace, Token::RBrace);
+
 
       auto token_stream = macten::TokenStream<MactenAllToken>::from_string(macro_body_token.lexeme);
       auto token_stream_view = token_stream.get_view();
@@ -411,6 +508,7 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
     }
 
     }
+
      m_macros.emplace_back(
       std::move(macro_name), 
       std::move(branch_bodies), 
@@ -547,8 +645,13 @@ public:
       return false;
      }
 
+
      bool success = macro_rule.apply(this, idx, "", target, args_mapping.value());
-     if (!success) return false;
+     if (!success)
+     {
+      std::cerr << "Something went really wrong...\n";
+      return false;
+     }
 
      while (all_token_stream_view.peek().any_of(MactenAllToken::Newline))
      {
@@ -685,7 +788,7 @@ public:
   // std::cout << source_tokens.construct();
   // std::cout << "\n======================================================\n";
 
-  // source_tokens = preprocess(source_tokens);
+  source_tokens = preprocess(source_tokens);
 
   // std::cout << "After preprocess\n======================================================\n";
   // std::cout << source_tokens.construct();
