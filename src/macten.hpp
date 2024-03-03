@@ -24,8 +24,14 @@ struct DeclarativeMacroParameter
   Asterisk,
  };
 
+ /**
+  * Default Constructor. Retursn an empty parameter list.
+  */
  DeclarativeMacroParameter() = default;
 
+ /**
+  * Returns a parameter object with corresponds to the parameter input in the form of a stream view.
+  */
  DeclarativeMacroParameter(macten::TokenStream<MactenToken>::TokenStreamView parameter_view)
  : pattern{}
  , pattern_mode(PatternMode::Normal)
@@ -82,6 +88,9 @@ struct DeclarativeMacroParameter
   }
  }
 
+ /**
+  * Checks whether the input arguments matches the variadic template.
+  */
  [[nodiscard]] auto match_variadic(macten::TokenStream<MactenToken>::TokenStreamView input) const noexcept -> bool
  {
   if (pattern_mode == PatternMode::Normal) return true;
@@ -280,6 +289,7 @@ public:
   }
  }
 
+ // Apply declarative template macro, the expansion is written to a target token stream.
  [[nodiscard]] auto apply(
      MactenWriter* env,
      const int index,
@@ -298,6 +308,9 @@ public:
   return param.map_args(arg_all_tokens_view);
  }
 
+ /**
+  * Try matching input against all patterns inside the environment and returns the corresponding macro index.
+  */
  [[nodiscard]] auto match(macten::TokenStream<MactenToken>::TokenStreamView view) const noexcept -> int 
  {
   for (int index {0}; index < m_params.size(); index++)
