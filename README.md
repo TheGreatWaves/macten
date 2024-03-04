@@ -72,12 +72,11 @@ if __name__ == "__main__":
 We can denote variadic arugments using the following syntax: `$($argname)`.
 ```
 defmacten_dec min {
-    ($a) => {$a}
-    ($a, $b) = {
-      some_min_func($a, min![$b])
-    }
+    ($x, $($y,)) => {min($x, min![$y])}
+    ($x,) => {$x}
 }
 ```
+Note that this parameter type expects an input which looks something like: `min![1, 2, 3, 4, 5,]`. The trailing comma is necessary and there is no way to avoid it. 
 
 # Advanced Macros
 Inspired by `Nim`, `Lisp` and `Rust`, advanced macros allow you to directly mutate the ast. Of course since `Macten` is generic, language configurations for the parser will have to be user defined.
