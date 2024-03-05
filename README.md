@@ -78,6 +78,24 @@ defmacten_dec min {
 ```
 Note that this parameter type expects an input which looks something like: `min![1, 2, 3, 4, 5,]`. The trailing comma is necessary and there is no way to avoid it. 
 
+# DSL
+A domain specific language, DSL for short, is a small language embedded in another. This behavior can be imitated quite nicely using the macro system.
+
+```py
+defmacten_dec command {
+ (eval $a;) => {$a}
+ (eval $a; $(eval $b;)) => {
+  command![eval ($a);]
+  command![$b]
+ }
+}
+
+command![
+ eval (3*3);
+ eval (2+3);
+]
+```
+
 # Advanced Macros
 Inspired by `Nim`, `Lisp` and `Rust`, advanced macros allow you to directly mutate the ast. Of course since `Macten` is generic, language configurations for the parser will have to be user defined.
 
