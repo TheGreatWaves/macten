@@ -19,6 +19,7 @@ struct DeclarativeMacroParameter
 {
  enum class PatternMode
  {
+  Empty,
   Normal,
   Plus,
   Asterisk,
@@ -37,6 +38,12 @@ struct DeclarativeMacroParameter
  , pattern_mode(PatternMode::Normal)
  , variadic_pattern{}
  {
+  if (parameter_view.peek().is(MactenToken::EndOfFile))
+  {
+   pattern_mode = PatternMode::Empty;
+   return;
+  }
+
   // Populate pattern and argument names.
   while (!parameter_view.is_at_end())
   {
@@ -142,6 +149,8 @@ struct DeclarativeMacroParameter
   */
  [[nodiscard]] auto match(macten::TokenStream<MactenToken>::TokenStreamView input) const noexcept -> bool
  {
+  // Match parameterless macro.
+  if (input.peek().is(MactenToken::EndOfFile) && pattern_mode == PatternMode::Empty) return true;
   for (std::size_t idx = 0; idx < pattern.size(); idx++)
   {
    const auto current_expected_token = pattern[idx];
@@ -642,7 +651,7 @@ public:
     const auto all_token_stream = macten::TokenStream<MactenAllToken>::from_string(args);
     auto all_token_stream_view = all_token_stream.get_view();
 
-    while (!all_token_stream_view.is_at_end())
+    do 
     {
      const auto token_stream = macten::TokenStream<MactenToken>::from_string(all_token_stream_view.construct());
      auto token_stream_view = token_stream.get_view();
@@ -672,6 +681,7 @@ public:
        target.push_back(all_token_stream_view.pop());
      }
     }
+    while ((!all_token_stream_view.is_at_end()));
     return true;
  }
 
