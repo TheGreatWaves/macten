@@ -94,6 +94,7 @@ struct DeclarativeMacroParameter
  [[nodiscard]] auto match_variadic(macten::TokenStream<MactenToken>::TokenStreamView input) const noexcept -> bool
  {
   if (pattern_mode == PatternMode::Normal) return true;
+  if (input.peek().is(MactenToken::EndOfFile)) return false;
 
   if (input.is_at_end()) return false;
 
