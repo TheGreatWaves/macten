@@ -591,7 +591,7 @@ public:
   */
  auto apply_macro_rules(macten::TokenStream<MactenAllToken>& target, macten::TokenStream<MactenAllToken>::TokenStreamView& source_view) -> bool
  {
-  while (!source_view.is_at_end())
+  while (!source_view.peek().is(MactenAllToken::EndOfFile))
   {
    auto token = source_view.peek();
 
