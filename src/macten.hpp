@@ -537,6 +537,25 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
        std::move(branch_parameters));
   } 
 
+  auto procedural_definition() -> void 
+  {
+    // Retrieve macro name.
+    consume(MactenToken::Identifier, "Expected macro name, found: '" + previous.lexeme + "'.");
+    const auto macro_name = previous.lexeme;
+
+    // Start parsing procedural macro body.
+    consume(Token::LBrace, "Expected macro body, missing '{', found: '" + previous.lexeme + "'.");
+
+    while (!match(Token::EndOfFile) && !match(Token::RBrace))
+    {
+      // Retrieve macro name.
+      consume(MactenToken::Identifier, "Expected rule label of type identifier, found: '" + current.lexeme + "'."); 
+      const auto rule_label = previous.lexeme;
+
+      consume(MactenToken::Colon, "Expected ':' after rule label name, found: '" + current.lexeme + "'.");
+
+    }
+  }
   /**
    * Parse declartions.
    */
@@ -545,6 +564,10 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
    if (match(Token::DeclarativeDefinition))
    {
      declarative_definition();
+   }
+   else if (match(MactenToken::ProceduralDefinition))
+   {
+     procedural_definition();
    }
    else
    {
