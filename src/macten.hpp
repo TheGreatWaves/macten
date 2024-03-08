@@ -553,7 +553,43 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
       const auto rule_label = previous.lexeme;
 
       consume(MactenToken::Colon, "Expected ':' after rule label name, found: '" + current.lexeme + "'.");
+      
+      if (match(MactenToken::DQuote))
+      {
+       advance();
+       const auto rule_value_token = previous;
+       advance();
+      }
+      else if (match(MactenToken::Identifier))
+      {
+       const auto rule_value_token = previous;
+      }
+      else 
+      {
+        advance();
+        report_error("Expected raw string or rule name, found '" + current.lexeme + "'.");
+        return;
+      }
 
+      while (match(MactenToken::Pipe))
+      {
+       if (match(MactenToken::DQuote))
+       {
+        advance();
+        const auto rule_value_token = previous;
+        advance();
+       }
+       else if (match(MactenToken::Identifier))
+       {
+        const auto rule_value_token = previous;
+       }
+       else 
+       {
+         advance();
+         report_error("Expected raw string or rule name, found '" + current.lexeme + "'.");
+         return;
+       }
+      }
     }
   }
   /**
