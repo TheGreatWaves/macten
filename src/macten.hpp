@@ -9,12 +9,112 @@
 #include <vector>
 #include <optional>
 #include <unordered_map>
+#include <memory>
 
 #include "token_stream.hpp"
 #include "utils.hpp"
 #include "macten_tokens.hpp"
 #include "macten_all_tokens.hpp"
 
+// Attemping to model switch case.
+/////////////////////////////////////////////////////////////////////
+
+struct ASTNode {
+ inline virtual std::ostream& str(std::ostream& os) const = 0;
+ inline friend std::ostream& operator<<(std::ostream& lhs, const ASTNode& rhs)
+ {
+  return rhs.str(lhs);
+ }
+};
+
+struct StringNode : public ASTNode
+{
+ std::string value;
+
+ inline virtual std::ostream& str(std::ostream& os) const 
+ {
+  return os << '"' << value << '"';
+ }
+
+ static std::unique_ptr<StringNode> make(const std::string& s)
+ {
+  auto node = std::make_unique<StringNode>();
+  node->value = s;
+  return node;
+ };
+};
+
+struct NumberNode: public ASTNode
+{
+ long number;
+
+ inline virtual std::ostream& str(std::ostream& os) const 
+ {
+  return os << number;
+ }
+
+ static std::unique_ptr<NumberNode> make(long n)
+ {
+  auto node = std::make_unique<NumberNode>();
+  node->number = n;
+  return node;
+ };
+};
+
+struct ReturnNode: public ASTNode 
+{
+ std::unique_ptr<ASTNode> ret_value;
+
+ inline virtual std::ostream& str(std::ostream& os) const 
+ {
+  return os << "return " << *ret_value << ';';
+ }
+
+ static std::unique_ptr<ReturnNode> make(std::unique_ptr<ASTNode> n)
+ {
+  auto node = std::make_unique<ReturnNode>();
+  node->ret_value = std::move(n);
+  return node;
+ };
+};
+
+struct WordSwitchCase: public ASTNode
+{
+ std::unique_ptr<ASTNode> case_value;
+ std::unique_ptr<ASTNode> case_body;
+
+ inline virtual std::ostream& str(std::ostream& os) const 
+ {
+  return os << "case " << *case_value << ": {" << *case_body << "}";
+ }
+
+ static std::unique_ptr<WordSwitchCase> make(std::unique_ptr<ASTNode> cv, std::unique_ptr<ASTNode> cb)
+ {
+  auto node = std::make_unique<WordSwitchCase>();
+  node->case_value = std::move(cv);
+  node->case_body = std::move(cb);
+  return node;
+ };
+};
+
+struct WordSwitchStmt: public ASTNode
+{
+ std::unique_ptr<ASTNode>              input;
+ std::vector<std::unique_ptr<ASTNode>> cases;
+
+ inline virtual std::ostream& str(std::ostream& os) const 
+ {
+  os << "switch (" << *input << ") {\n";
+  for (const auto& c : cases)
+  {
+   os << "  " << *c << '\n';
+  }
+  os << '}';
+  return os;
+ }
+};
+
+/////////////////////////////////////////////////////////////////////
 struct DeclarativeMacroParameter
 {
  enum class PatternMode
