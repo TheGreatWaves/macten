@@ -78,6 +78,29 @@ defmacten_dec min {
 ```
 Note that this parameter type expects an input which looks something like: `min![1, 2, 3, 4, 5,]`. The trailing comma is necessary and there is no way to avoid it. 
 
+# Expansion Order
+The expansion order of macros can result in some very surprising behaviors. The following example illustrates an example which might seem counter intuitive.
+```py
+defmacten_dec min {
+    ($x, $($y,)) => {min($x, min![$y])}
+    ($x,) => {$x}
+}
+
+defmacten_dec list {
+    () => {1,2,3,4,5,}
+}
+
+# Case 1
+min![list![]] 
+
+# Case 2
+min![(list![])]
+```
+
+Case 1 will not work because parenthesis is required for invoking the macro. So in this case, we will instead match against the tokens "list", "!", "[", "]".
+Case 2 will not work because the expansion of `list![]` will be captured as one collective token. Instead of processing each tokens from the expansion, it will instead match a single token (with the lexeme being the expansion of `list![]`).
+
+
 # DSL
 A domain specific language, DSL for short, is a small language embedded in another. This behavior can be imitated quite nicely using the macro system.
 
