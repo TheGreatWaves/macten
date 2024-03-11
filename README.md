@@ -97,9 +97,22 @@ min![list![]]
 min![(list![])]
 ```
 
-Case 1 will not work because parenthesis is required for invoking the macro. So in this case, we will instead match against the tokens "list", "!", "[", "]".
+Case 1 will not work because parenthesis is required for invoking the macro. So in this case, we will instead match against the tokens `"list"`, `"!"`, `"["`, `"]"`.
+
 Case 2 will not work because the expansion of `list![]` will be captured as one collective token. Instead of processing each tokens from the expansion, it will instead match a single token (with the lexeme being the expansion of `list![]`).
 
+The solution is simply to use a caller helper macro function.
+
+```py
+defmacten_dec caller {
+  ($m, $a) => {$m![$a]}
+}
+
+caller![min, (list![])]
+# Result: min(1, min(2, min(3, 4)))
+```
+
+By utilizing a caller, we are able to pass in the expansion of `list![]` as a token stream to `min![]` rather it being a single token.
 
 # DSL
 A domain specific language, DSL for short, is a small language embedded in another. This behavior can be imitated quite nicely using the macro system.
