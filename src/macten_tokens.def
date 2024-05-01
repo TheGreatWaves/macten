@@ -24,6 +24,7 @@ SYMBOL_TOKEN(Hash,        "#")
 SYMBOL_TOKEN(Percentage,  "%")
 SYMBOL_TOKEN(Hat,         "^")
 SYMBOL_TOKEN(And,         "&")
+SYMBOL_TOKEN(Pipe,        "|")
 SYMBOL_TOKEN(Underscore,  "_")
 SYMBOL_TOKEN(Tab,         "\t")
 
