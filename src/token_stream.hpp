@@ -2,8 +2,6 @@
 #define MACTEN_TOKEN_STREAM_H
 #pragma once
 
-#include <stack>
-#include <concepts>
 #include <sstream>
 #include <string>
 #include <algorithm>
