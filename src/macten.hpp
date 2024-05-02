@@ -659,7 +659,7 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
       {
        advance();
        const auto rule_value_token = previous;
-       advance();
+       consume(MactenToken::DQuote, "Expected end of string, found: " + previous.lexeme);
       }
       else if (match(MactenToken::Identifier))
       {
@@ -678,7 +678,7 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
        {
         advance();
         const auto rule_value_token = previous;
-        advance();
+        consume(MactenToken::DQuote, "Expected end of string, found: " + previous.lexeme);
        }
        else if (match(MactenToken::Identifier))
        {
