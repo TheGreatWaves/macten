@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from typing import List
+from numbers import Number
 
 
 @dataclass
@@ -36,3 +37,31 @@ class ProceduralMacroContext:
 
     def get_rule(self, name):
         return self.rules[name]
+
+
+@dataclass
+class ident:
+    lexeme: str
+
+    def parse(s):
+        v = s.peek()
+        if isinstance(v, str):
+            return ident(lexeme=s.pop(0))
+        return None
+
+    def out(self):
+        return self.lexeme
+
+
+@dataclass
+class number:
+    lexeme: str
+
+    def parse(s):
+        v = s.peek()
+        if v.replace('.', '', 1).isdigit():
+            return ident(lexeme=s.pop(0))
+        return None
+
+    def out(self):
+        return self.lexeme
