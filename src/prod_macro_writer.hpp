@@ -3,9 +3,31 @@
 
 #include <iostream>
 #include <sstream>
+#include <functional>
+
+#define BEGIN_INDENT(body) if (const auto v = this->begin_indent(body); v)
 
 namespace macten
 {
+
+struct ScopeCallback
+{
+  explicit ScopeCallback(std::function<void()> f)
+  : callback(f)
+  {
+  }
+
+  ~ScopeCallback()
+  {
+   callback();
+  }
+
+   explicit operator bool() const noexcept {
+       return true;
+   }
+
+  std::function<void()> callback;
+};
 
 // CodeEmitter is used to generate Python code which is used to handle procedural macros. 
 struct CodeEmitter
@@ -15,16 +37,23 @@ struct CodeEmitter
    this->comment("AUTO GENERATED CODE, DO NOT EDIT");
 
    this->section("Imports");
-   this->write("import \"prod_macro_utils.py\"");
+   this->writeln("import \"prod_macro_utils.py\"");
+   this->writeln("from dataclasses import dataclass");
 
    this->section("Structures / Storage");
    this->comment("STORAGE FOR ALL PROCEDURAL MACRO RULES");
-   this->write("ctx = ProceduralMacroContext()");
+   this->writeln("ctx = ProceduralMacroContext()");
 
-   this->section("Driver");
-   this->write("if __name__ == \"__main__\":");
-   this->inc_indent();
-   this->write("print(ctx.rules)");
+   this->section("ident");
+   this->writeln("@dataclass");
+   this->writeln("class indent:");
+   this->indent();
+    this->writeln("_value: str");
+    this->newln();
+    this->writeln("def value():");
+    this->indent();
+     this->writeln("return _value");
+    this->dec_indent();
    this->dec_indent();
   }
 
@@ -33,6 +62,7 @@ struct CodeEmitter
    */
   inline auto newln(std::size_t nlc = 1) -> void
   {
+   this->need_indent = true;
    for (std::size_t i {0}; i < nlc; i++)
    {
     this->code << '\n';
@@ -44,9 +74,9 @@ struct CodeEmitter
    std::size_t size = name.length() + 2;
    const std::string line = "#" + std::string(size, '=') + "#";
    this->newln();
-   this->write(line);
+   this->writeln(line);
    this->comment(std::string(name) + " #");
-   this->write(line);
+   this->writeln(line);
    this->newln();
   }
 
@@ -58,9 +88,15 @@ struct CodeEmitter
    }
   }
 
-  inline auto inc_indent() -> void
+  inline auto indent() -> void
   {
    this->indent_level++;
+  }
+
+  inline auto begin_indent(std::string_view line) -> ScopeCallback
+  {
+   this->writeln(line);
+   return ScopeCallback([this] {this->dec_indent();});
   }
 
   inline auto dec_indent() -> void
@@ -71,10 +107,18 @@ struct CodeEmitter
   /**
    * Write line.
    */
+  inline auto writeln(std::string_view line) -> void
+  {
+   this->match_indent();
+   this->code << line;
+   this->newln();
+  }
+
   inline auto write(std::string_view line) -> void
   {
-   match_indent();
-   this->code << line << '\n';
+   if (this->need_indent) this->match_indent();
+   this->code << line << ' ';
+   this->need_indent = false;
   }
 
   /**
@@ -82,8 +126,9 @@ struct CodeEmitter
    */
   inline auto comment(std::string_view message) -> void
   {
-   match_indent();
-   this->code << "# " << message << '\n';
+   this->match_indent();
+   this->code << "# " << message;
+   this->newln();
   }
 
   /**
@@ -98,7 +143,8 @@ struct CodeEmitter
    * Members.
    */
   std::stringstream code{};
-  std::size_t indent_level {0};
+  std::size_t       indent_level {0};
+  bool              need_indent {true};
 };
 
 
