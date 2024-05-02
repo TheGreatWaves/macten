@@ -467,6 +467,7 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
  public:
    [[nodiscard]] explicit DeclarativeMacroParser(const std::string& file_path)
        : cpp20scanner::BaseParser<MactenTokenScanner, MactenToken>(file_path)
+       , emitter()
    {
    }
 
@@ -712,6 +713,7 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
   }
  public: 
  std::vector<DeclarativeMacroDetail> m_macros;
+ macten::CodeEmitter                 emitter;
 };
 
 // TODO: This class needs to be refactored.
