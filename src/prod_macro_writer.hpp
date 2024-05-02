@@ -43,18 +43,6 @@ struct CodeEmitter
    this->section("Structures / Storage");
    this->comment("STORAGE FOR ALL PROCEDURAL MACRO RULES");
    this->writeln("ctx = ProceduralMacroContext()");
-
-   this->section("ident");
-   this->writeln("@dataclass");
-   this->writeln("class indent:");
-   this->indent();
-    this->writeln("_value: str");
-    this->newln();
-    this->writeln("def value():");
-    this->indent();
-     this->writeln("return _value");
-    this->dec_indent();
-   this->dec_indent();
   }
 
   /**
