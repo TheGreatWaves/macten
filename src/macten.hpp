@@ -1,4 +1,5 @@
 #pragma once
+#include "prod_macro_writer.hpp"
 #ifndef MACTEN_H
 #define MACTEN_H
 
@@ -644,6 +645,9 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
     consume(MactenToken::Identifier, "Expected macro name, found: '" + previous.lexeme + "'.");
     const auto macro_name = previous.lexeme;
 
+    emitter.section(macro_name);
+
+
     // Start parsing procedural macro body.
     consume(Token::LBrace, "Expected macro body, missing '{', found: '" + previous.lexeme + "'.");
 
@@ -653,6 +657,11 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
       consume(MactenToken::Identifier, "Expected rule label of type identifier, found: '" + current.lexeme + "'."); 
       const auto rule_label = previous.lexeme;
 
+       emitter.writeln("@dataclass");
+       emitter.writeln("class " + macro_name + "_" + rule_label + ":");
+       emitter.indent();
+       emitter.write("_value:");
+
       consume(MactenToken::Colon, "Expected ':' after rule label name, found: '" + current.lexeme + "'.");
       
       if (match(MactenToken::DQuote))
@@ -660,10 +669,13 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
        advance();
        const auto rule_value_token = previous;
        consume(MactenToken::DQuote, "Expected end of string, found: " + previous.lexeme);
+       emitter.write("str");
+
       }
       else if (match(MactenToken::Identifier))
       {
        const auto rule_value_token = previous;
+       emitter.write(rule_value_token.lexeme);
       }
       else 
       {
@@ -672,17 +684,21 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
         return;
       }
 
+
       while (match(MactenToken::Pipe))
       {
+       emitter.write("|");
        if (match(MactenToken::DQuote))
        {
         advance();
         const auto rule_value_token = previous;
         consume(MactenToken::DQuote, "Expected end of string, found: " + previous.lexeme);
+        emitter.write("str");
        }
        else if (match(MactenToken::Identifier))
        {
         const auto rule_value_token = previous;
+        emitter.write(rule_value_token.lexeme);
        }
        else 
        {
@@ -692,6 +708,10 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
        }
       }
     }
+
+    emitter.dec_indent();
+
+    emitter.dump();
   }
   /**
    * Parse declartions.
