@@ -1,5 +1,4 @@
 #pragma once
-#include "prod_macro_writer.hpp"
 #ifndef MACTEN_H
 #define MACTEN_H
 
@@ -12,6 +11,8 @@
 #include <unordered_map>
 #include <memory>
 
+#include "prod_macro_writer.hpp"
+#include "prod_macro_def.hpp"
 #include "token_stream.hpp"
 #include "utils.hpp"
 #include "macten_tokens.hpp"
@@ -641,12 +642,13 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
 
   auto procedural_definition() -> void 
   {
+    // New procedural macro profile.
+    macten::ProceduralMacroProfile profile {};
+
     // Retrieve macro name.
     consume(MactenToken::Identifier, "Expected macro name, found: '" + previous.lexeme + "'.");
     const auto macro_name = previous.lexeme;
-
-    emitter.section(macro_name);
-
+    profile.set_name(macro_name);
 
     // Start parsing procedural macro body.
     consume(Token::LBrace, "Expected macro body, missing '{', found: '" + previous.lexeme + "'.");
@@ -657,61 +659,51 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
       consume(MactenToken::Identifier, "Expected rule label of type identifier, found: '" + current.lexeme + "'."); 
       const auto rule_label = previous.lexeme;
 
-       emitter.writeln("@dataclass");
-       emitter.writeln("class " + macro_name + "_" + rule_label + ":");
-       emitter.indent();
-       emitter.write("_value:");
+      auto& rule = profile.create_rule(rule_label);
 
       consume(MactenToken::Colon, "Expected ':' after rule label name, found: '" + current.lexeme + "'.");
       
-      if (match(MactenToken::DQuote))
-      {
-       advance();
-       const auto rule_value_token = previous;
-       consume(MactenToken::DQuote, "Expected end of string, found: " + previous.lexeme);
-       emitter.write("str");
-
-      }
-      else if (match(MactenToken::Identifier))
-      {
-       const auto rule_value_token = previous;
-       emitter.write(rule_value_token.lexeme);
-      }
-      else 
+      if (!check(MactenToken::Identifier)) 
       {
         advance();
         report_error("Expected raw string or rule name, found '" + current.lexeme + "'.");
         return;
       }
 
-
-      while (match(MactenToken::Pipe))
+      std::vector<std::string> entry{};
+      while (match(MactenToken::Identifier))
       {
-       emitter.write("|");
-       if (match(MactenToken::DQuote))
-       {
-        advance();
-        const auto rule_value_token = previous;
-        consume(MactenToken::DQuote, "Expected end of string, found: " + previous.lexeme);
-        emitter.write("str");
-       }
-       else if (match(MactenToken::Identifier))
-       {
-        const auto rule_value_token = previous;
-        emitter.write(rule_value_token.lexeme);
-       }
-       else 
-       {
-         advance();
-         report_error("Expected raw string or rule name, found '" + current.lexeme + "'.");
-         return;
-       }
+       const auto rule_value_token = previous;
+       entry.push_back(rule_value_token.lexeme);
       }
+      rule.push_back(entry);
+
+      consume(MactenToken::Semicolon, "Expected semicolon");
+
+      // while (match(mactentoken::pipe))
+      // {
+      //  if (match(mactentoken::dquote))
+      //  {
+      //   advance();
+      //   const auto rule_value_token = previous;
+      //   rule.push_back(rule_value_token.lexeme);
+      //   consume(mactentoken::dquote, "expected end of string, found: " + previous.lexeme);
+      //  }
+      //  else if (match(mactentoken::identifier))
+      //  {
+      //   const auto rule_value_token = previous;
+      //   rule.push_back(rule_value_token.lexeme);
+      //  }
+      //  else 
+      //  {
+      //    advance();
+      //    report_error("expected raw string or rule name, found '" + current.lexeme + "'.");
+      //    return;
+      //  }
+      // }
     }
 
-    emitter.dec_indent();
-
-    emitter.dump();
+    profile.dump();
   }
   /**
    * Parse declartions.

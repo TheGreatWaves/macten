@@ -28,7 +28,7 @@ class ListStream:
         return len(self.lst) == 0
 
     def __init__(self, s):
-        self.lst = s.split(" ")
+        self.lst = [value.strip() for value in s.split(" ")]
 
 
 class ProceduralMacroContext:
@@ -49,27 +49,44 @@ class ProceduralMacroContext:
 
 @dataclass
 class ident:
-    value: str
+    _value: str
 
-    def parse(s):
-        v = s.peek()
+    @staticmethod
+    def parse(input: ListStream):
+        v = input.peek()
         if isinstance(v, str):
-            return ident(value=s.pop(0))
+            return ident(_value=input.pop(0))
         return None
 
     def out(self):
-        return self.value
+        return self._value
 
 
 @dataclass
 class number:
-    value: str
+    _value: str
 
-    def parse(s):
-        v = s.peek()
+    @staticmethod
+    def parse(input: ListStream):
+        v = input.peek()
         if v.replace('.', '', 1).isdigit():
-            return ident(value=s.pop(0))
+            return ident(_value=input.pop(0))
         return None
 
     def out(self):
-        return self.value
+        return self._value
+
+
+def node_print(node):
+    _node_print(node)
+    print()
+
+
+def _node_print(node):
+    if isinstance(node, str):
+        print(node, end=" ")
+    elif isinstance(node, list):
+        for child in node:
+            _node_print(child)
+    else:
+        _node_print(node._value)

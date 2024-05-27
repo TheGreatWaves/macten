@@ -37,7 +37,8 @@ struct CodeEmitter
    this->comment("AUTO GENERATED CODE, DO NOT EDIT");
 
    this->section("Imports");
-   this->writeln("from prod_macro_utils import *");
+   this->writeln("from prod_macro_utils import ListStream, ProceduralMacroContext, ident, number, node_print");
+   this->writeln("from typing import Any");
    this->writeln("from dataclasses import dataclass");
 
    this->section("Structures / Storage");
@@ -81,9 +82,9 @@ struct CodeEmitter
    this->indent_level++;
   }
 
-  inline auto begin_indent(std::string_view line) -> ScopeCallback
+  inline auto begin_indent(std::string_view line = "") -> ScopeCallback
   {
-   this->writeln(line);
+   if (!line.empty()) this->writeln(line);
    this->indent();
    return ScopeCallback([&] {this->dec_indent();});
   }
@@ -103,10 +104,10 @@ struct CodeEmitter
    this->newln();
   }
 
-  inline auto write(std::string_view line) -> void
+  inline auto write(std::string_view line, std::string_view postfix = "") -> void
   {
    if (this->need_indent) this->match_indent();
-   this->code << line << ' ';
+   this->code << line << postfix;
    this->need_indent = false;
   }
 
