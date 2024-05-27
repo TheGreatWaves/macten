@@ -234,7 +234,7 @@ struct ProceduralMacroProfile
   {
     emitter.section("Driver");
     emitter.writeln("input = ListStream(\"int foo\")");
-    emitter.writeln("print(assignment_type.parse(input))");
+    emitter.writeln("print(" + this->name + "_" + this->last_rule + ".parse(input))");
   }
 
   /**
@@ -260,6 +260,7 @@ struct ProceduralMacroProfile
    */
   std::string                                name  {};
   std::map<std::string, ProceduralMacroRule> rules {};
+  std::string                                last_rule {};
 };
 
 }; // namespace macten
