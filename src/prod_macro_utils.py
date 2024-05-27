@@ -11,10 +11,9 @@ class ListStream:
         v = self.lst[0]
 
         if v == match:
-            self.pop()
-            return True
+            return self.pop()
 
-        return False
+        return None
 
     def at(self, idx):
         return self.lst[idx]
@@ -25,12 +24,21 @@ class ListStream:
     def pop(self, idx=0):
         return self.lst.pop(idx)
 
+    def empty(self):
+        return len(self.lst) == 0
+
+    def __init__(self, s):
+        self.lst = s.split(" ")
+
 
 class ProceduralMacroContext:
     def __init__(self):
-
         # Storage for all procedural macro rules.
         self.rules = {}
+        self.known = set()
+
+        self.add_rule("ident", ident)
+        self.add_rule("number", number)
 
     def add_rule(self, name, rule):
         self.rules[name] = rule
@@ -41,27 +49,27 @@ class ProceduralMacroContext:
 
 @dataclass
 class ident:
-    lexeme: str
+    value: str
 
     def parse(s):
         v = s.peek()
         if isinstance(v, str):
-            return ident(lexeme=s.pop(0))
+            return ident(value=s.pop(0))
         return None
 
     def out(self):
-        return self.lexeme
+        return self.value
 
 
 @dataclass
 class number:
-    lexeme: str
+    value: str
 
     def parse(s):
         v = s.peek()
         if v.replace('.', '', 1).isdigit():
-            return ident(lexeme=s.pop(0))
+            return ident(value=s.pop(0))
         return None
 
     def out(self):
-        return self.lexeme
+        return self.value
