@@ -37,7 +37,7 @@ struct CodeEmitter
    this->comment("AUTO GENERATED CODE, DO NOT EDIT");
 
    this->section("Imports");
-   this->writeln("import \"prod_macro_utils.py\"");
+   this->writeln("from prod_macro_utils import *");
    this->writeln("from dataclasses import dataclass");
 
    this->section("Structures / Storage");
@@ -84,7 +84,8 @@ struct CodeEmitter
   inline auto begin_indent(std::string_view line) -> ScopeCallback
   {
    this->writeln(line);
-   return ScopeCallback([this] {this->dec_indent();});
+   this->indent();
+   return ScopeCallback([&] {this->dec_indent();});
   }
 
   inline auto dec_indent() -> void
