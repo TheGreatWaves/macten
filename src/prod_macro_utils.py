@@ -82,15 +82,32 @@ class number:
 
 
 def node_print(node):
-    _node_print(node)
+    print(f"{type(node).__name__}")
+    if isinstance(node._value, dict):
+        size = len(node._value)
+        for i, (key, child) in enumerate(node._value.items()):
+            not_last = i < size - 1
+            tmp = "├─" if not_last else "└─"
+            prefix = "|  " if not_last else "   "
+            print(f"{tmp}{type(child).__name__}")
+            _node_print(child, prefix=prefix)
+    else:
+        _node_print(node._value, prefix="|  ")
     print()
 
 
-def _node_print(node):
+def _node_print(node, prefix=""):
     if isinstance(node, str):
-        print(node, end=" ")
-    elif isinstance(node, list):
-        for child in node:
-            _node_print(child)
+        print(f"{prefix}└─{node}")
+        return
+
+    if isinstance(node._value, dict):
+        size = len(node._value)
+        for i, (key, child) in enumerate(node._value.items()):
+            not_last = i < size - 1
+            tmp = "├─" if not_last else "└─"
+            print(f"{prefix}{tmp}{type(child).__name__}")
+            _node_print(child, prefix=prefix + ("|  " if not_last else "   "))
     else:
-        _node_print(node._value)
+        print(f"{prefix}└─{type(node).__name__}")
+        _node_print(node._value, prefix=prefix + "   ")

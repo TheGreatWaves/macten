@@ -96,8 +96,8 @@ struct ProceduralMacroProfile
        emitter.newln();
 
        {
-        emitter.writeln("@staticmethod");
-         TEMP emitter.begin_indent("def parse(input: ListStream):");
+         emitter.writeln("@staticmethod");
+         TEMP emitter.begin_indent("def parse(input: ListStream, ast: Any):");
          {
            {
              TEMP emitter.begin_indent("if input.empty():");
@@ -115,7 +115,7 @@ struct ProceduralMacroProfile
                    emitter.writeln("t_input = input.deepcopy()");
                    if (rules.contains(rule_value))
                    {
-                    TEMP emitter.begin_indent("if (value := (" + get_name(rule_value) + ".parse(t_input)))[1]:");
+                    TEMP emitter.begin_indent("if (value := (" + get_name(rule_value) + ".parse(t_input, ast)))[1]:");
                     emitter.writeln("return value[0], " + name + "(_value=value[1])");
                    }
                    else if (rule_value == "ident")
@@ -145,9 +145,20 @@ struct ProceduralMacroProfile
                  emitter.writeln("t_input = input.deepcopy()");
                  if (rules.contains(rule_value))
                  {
-                   TEMP emitter.begin_indent("if (value := (" + get_name(rule_value) + ".parse(t_input)))[1]:");
-                   emitter.writeln("t_input, ast = value");
-                   emitter.writeln("value = {\"" + rule_value + "\": ast}");
+                   const auto rule_name = get_name(rule_value);
+
+                   // Handle recursive self case
+                  if (rule_name == name)
+                  {
+                    TEMP emitter.begin_indent("if isinstance(ast, " + name + "):");
+                    emitter.writeln("value = {\"" + rule_value + "\": ast}");
+                  }
+                  else 
+                  {
+                    TEMP emitter.begin_indent("if (value := (" + rule_name + ".parse(t_input, ast)))[1]:");
+                    emitter.writeln("t_input, ast = value");
+                    emitter.writeln("value = {\"" + rule_value + "\": ast}");
+                  }
                  }
                  else if (rule_value == "ident")
                  {
@@ -175,7 +186,7 @@ struct ProceduralMacroProfile
                    if (rules.contains(rule_value))
                    {
                      {
-                       TEMP emitter.begin_indent("if (tmp := (" + get_name(rule_value) + ".parse(t_input)))[1]:");
+                       TEMP emitter.begin_indent("if (tmp := (" + get_name(rule_value) + ".parse(t_input, ast)))[1]:");
                        emitter.writeln("t_input, value[\"" + rule_value + "\"] = tmp");
                      }
                      {
@@ -234,13 +245,14 @@ struct ProceduralMacroProfile
   {
     emitter.section("Driver");
     emitter.writeln("input = ListStream(\"\"\" foo : double ; int bar ; \"\"\")");
-
+    emitter.writeln("ast = None");
     {
       TEMP emitter.begin_indent("while input and not input.empty():");
-      emitter.writeln("input, ast = " + this->name + "_" + this->last_rule + ".parse(input)");
-      TEMP emitter.begin_indent("if ast is not None:");
-      emitter.writeln("print(ast)");
+      emitter.writeln("input, ast = " + this->name + "_" + this->last_rule + ".parse(input, ast)");
+      TEMP emitter.begin_indent("if ast is None:");
+      emitter.writeln("print(\"Something went wrong!\")");
     }
+    emitter.writeln("node_print(ast)");
   }
 
   /**
