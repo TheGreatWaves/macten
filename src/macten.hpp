@@ -660,47 +660,35 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
       const auto rule_label = previous.lexeme;
 
       auto& rule = profile.create_rule(rule_label);
+      profile.last_rule = rule_label;
 
-      consume(MactenToken::Colon, "Expected ':' after rule label name, found: '" + current.lexeme + "'.");
-      
-      if (!check(MactenToken::Identifier)) 
+      // Parse proc macro rules.
+      do
       {
-        advance();
-        report_error("Expected raw string or rule name, found '" + current.lexeme + "'.");
-        return;
+        consume(MactenToken::LBrace, "Expected '{' after rule label name, found: '" + current.lexeme + "'.");
+
+        int8_t scope {1};
+        std::vector<std::string> entry{};
+        while (!match(Token::EndOfFile))
+        {
+          switch (current.type)
+          {
+            break; case MactenToken::RBrace: { scope--; }
+            break; case MactenToken::LBrace: { scope++; }
+            break; default: {}
+          }
+          advance();
+
+          // Break out if out of body scope.
+          if (scope == 0) break;
+
+          // Add the rule 
+          const auto rule_value_token = previous;
+          entry.push_back(rule_value_token.lexeme);
+        }
+        rule.push_back(entry);
       }
-
-      std::vector<std::string> entry{};
-      while (match(MactenToken::Identifier))
-      {
-       const auto rule_value_token = previous;
-       entry.push_back(rule_value_token.lexeme);
-      }
-      rule.push_back(entry);
-
-      consume(MactenToken::Semicolon, "Expected semicolon");
-
-      // while (match(mactentoken::pipe))
-      // {
-      //  if (match(mactentoken::dquote))
-      //  {
-      //   advance();
-      //   const auto rule_value_token = previous;
-      //   rule.push_back(rule_value_token.lexeme);
-      //   consume(mactentoken::dquote, "expected end of string, found: " + previous.lexeme);
-      //  }
-      //  else if (match(mactentoken::identifier))
-      //  {
-      //   const auto rule_value_token = previous;
-      //   rule.push_back(rule_value_token.lexeme);
-      //  }
-      //  else 
-      //  {
-      //    advance();
-      //    report_error("expected raw string or rule name, found '" + current.lexeme + "'.");
-      //    return;
-      //  }
-      // }
+      while (match(Token::Pipe));
     }
 
     profile.dump();

@@ -101,7 +101,7 @@ struct ProceduralMacroProfile
          {
            {
              TEMP emitter.begin_indent("if input.empty():");
-             emitter.writeln("return None");
+             emitter.writeln("return None, None");
            }
            for (const auto& rule_values : rule_definition)
            {
@@ -110,120 +110,120 @@ struct ProceduralMacroProfile
              {
                const auto &rule_value = rule_values[0];
                {
-                 if (rules.contains(rule_value))
                  {
-                  TEMP emitter.begin_indent("elif value := (" + get_name(rule_value) + ".parse(input)):");
-                  emitter.writeln("return " + name + "(_value=value)");
-                 }
-                 else if (rule_value == "ident")
-                 {
-                  TEMP emitter.begin_indent("elif value := (ident.parse(input)):");
-                  emitter.writeln("return " + name + "(_value=value)");
-                 }
-                 else if (rule_value == "number")
-                 {
-                  TEMP emitter.begin_indent("elif value := (number.parse(input)):");
-                  emitter.writeln("return " + name + "(_value=value)");
-                 }
-                 else 
-                 {
-                  TEMP emitter.begin_indent("elif value := (input.pop_if(\"" + rule_value + "\")):");
-                  emitter.writeln("return " + name + "(_value=value)");
+                   TEMP emitter.begin_indent("while True:");
+                   emitter.writeln("t_input = input.deepcopy()");
+                   if (rules.contains(rule_value))
+                   {
+                    TEMP emitter.begin_indent("if (value := (" + get_name(rule_value) + ".parse(t_input)))[1]:");
+                    emitter.writeln("return value[0], " + name + "(_value=value[1])");
+                   }
+                   else if (rule_value == "ident")
+                   {
+                    TEMP emitter.begin_indent("if (value := (ident.parse(t_input))):");
+                    emitter.writeln("return value[0], " + name + "(_value=value[1])");
+                   }
+                   else if (rule_value == "number")
+                   {
+                    TEMP emitter.begin_indent("if (value := (number.parse(t_input))):");
+                    emitter.writeln("return value[0], " + name + "(_value=value[1])");
+                   }
+                   else 
+                   {
+                    TEMP emitter.begin_indent("if (value := (t_input.pop_if(\"" + rule_value + "\"))):");
+                    emitter.writeln("return t_input, " + name + "(_value=value)");
+                   }
+                   emitter.writeln("break");
                  }
                }
              }
              else
              {
                const auto &rule_value = rule_values[0];
-               if (rules.contains(rule_value))
                {
-                 emitter.begin_indent("elif value := (" + get_name(rule_value) + ".parse(input)):");
-               }
-               else if (rule_value == "ident")
-               {
-                 emitter.begin_indent("elif value := (ident.parse(input)):");
-               }
-               else if (rule_value == "number")
-               {
-                 emitter.begin_indent("elif value := (number.parse(input)):");
-               }
-               else 
-               {
-                 emitter.begin_indent("elif value := (input.pop_if(\"" + rule_value + "\")):");
-               }
-               TEMP emitter.begin_indent();
-
-               emitter.writeln("value = [value]");
-
-               for (std::size_t i {1}; i < rule_values.size(); i++)
-               {
-                 const auto &rule_value = rule_values[i];
+                 TEMP emitter.begin_indent("while True:");
+                 emitter.writeln("t_input = input.deepcopy()");
                  if (rules.contains(rule_value))
                  {
-                   {
-                     TEMP emitter.begin_indent("if tmp := (" + get_name(rule_value) + ".parse(input)):");
-                     emitter.writeln("value.append(tmp)");
-                   }
-                   {
-                     TEMP emitter.begin_indent("else:");
-                     emitter.writeln("return None");
-                   }
+                   TEMP emitter.begin_indent("if (value := (" + get_name(rule_value) + ".parse(t_input)))[1]:");
+                   emitter.writeln("t_input, ast = value");
+                   emitter.writeln("value = {\"" + rule_value + "\": ast}");
                  }
                  else if (rule_value == "ident")
                  {
-                   {
-                     TEMP emitter.begin_indent("if tmp := (ident.parse(input)):");
-                     emitter.writeln("value.append(tmp)");
-                   }
-                   {
-                     TEMP emitter.begin_indent("else:");
-                     emitter.writeln("return None");
-                   }
+                   TEMP emitter.begin_indent("if (value := (ident.parse(t_input)))[1]:");
+                   emitter.writeln("t_input, ast = value");
+                   emitter.writeln("value = {\"" + rule_value + "\": ast}");
                  }
                  else if (rule_value == "number")
                  {
-                   {
-                     TEMP emitter.begin_indent("if tmp := (number.parse(input)):");
-                     emitter.writeln("value.append(tmp)");
-                   }
-                   {
-                     TEMP emitter.begin_indent("else:");
-                     emitter.writeln("return None");
-                   }
+                   TEMP emitter.begin_indent("if (value := (number.parse(t_input)))[1]:");
+                   emitter.writeln("t_input, ast = value");
+                   emitter.writeln("value = {\"" + rule_value + "\": ast}");
                  }
                  else 
                  {
+                   TEMP emitter.begin_indent("if t_input.pop_if(\"" + rule_value + "\"):");
+                   emitter.writeln("value = {}");
+                 }
+                 TEMP emitter.begin_indent();
+
+
+                 for (std::size_t i {1}; i < rule_values.size(); i++)
+                 {
+                   const auto &rule_value = rule_values[i];
+                   if (rules.contains(rule_value))
                    {
-                     TEMP emitter.begin_indent("if tmp := (input.pop_if(\"" + rule_value + "\")):");
-                     emitter.writeln("value.append(tmp)");
+                     {
+                       TEMP emitter.begin_indent("if (tmp := (" + get_name(rule_value) + ".parse(t_input)))[1]:");
+                       emitter.writeln("t_input, value[\"" + rule_value + "\"] = tmp");
+                     }
+                     {
+                       TEMP emitter.begin_indent("else:");
+                       emitter.writeln("break");
+                     }
                    }
+                   else if (rule_value == "ident")
                    {
-                     TEMP emitter.begin_indent("else:");
-                     emitter.writeln("return None");
+                     {
+                       TEMP emitter.begin_indent("if (tmp := (ident.parse(t_input)))[1]:");
+                       emitter.writeln("t_input, value[\"" + rule_value + "\"] = tmp");
+                     }
+                     {
+                       TEMP emitter.begin_indent("else:");
+                       emitter.writeln("break");
+                     }
+                   }
+                   else if (rule_value == "number")
+                   {
+                     {
+                       TEMP emitter.begin_indent("if (tmp := (number.parse(t_input)))[1]:");
+                       emitter.writeln("t_input, value[\"" + rule_value + "\"] = tmp");
+                     }
+                     {
+                       TEMP emitter.begin_indent("else:");
+                       emitter.writeln("break");
+                     }
+                   }
+                   else 
+                   {
+                     {
+                       TEMP emitter.begin_indent("if not t_input.pop_if(\"" + rule_value + "\"):");
+                       emitter.writeln("break");
+                     }
                    }
                  }
+                 emitter.writeln("return t_input, " + name + "(_value=value)");
                }
-
-               emitter.writeln("return " + name + "(_value=value)");
+               {
+                 TEMP emitter.begin_indent();     
+                 emitter.writeln("break");
+               }
              }
 
            }
-           emitter.writeln("return None");
+           emitter.writeln("return None, None");
          }
-       }
-
-       emitter.newln();
-       /**
-        * Pretty print.
-        */
-       {
-         TEMP emitter.begin_indent("def out(self):");
-         emitter.write("print(\"");
-         for (const auto& [member_name, _] : this->rules)
-         {
-           emitter.write(member_name);
-         }
-         emitter.write("\")\n");
        }
      }
      emitter.newln();
@@ -233,8 +233,14 @@ struct ProceduralMacroProfile
   auto dump_driver(CodeEmitter& emitter) -> void
   {
     emitter.section("Driver");
-    emitter.writeln("input = ListStream(\"int foo\")");
-    emitter.writeln("print(" + this->name + "_" + this->last_rule + ".parse(input))");
+    emitter.writeln("input = ListStream(\"\"\" foo : double ; int bar ; \"\"\")");
+
+    {
+      TEMP emitter.begin_indent("while input and not input.empty():");
+      emitter.writeln("input, ast = " + this->name + "_" + this->last_rule + ".parse(input)");
+      TEMP emitter.begin_indent("if ast is not None:");
+      emitter.writeln("print(ast)");
+    }
   }
 
   /**

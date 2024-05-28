@@ -8,7 +8,7 @@ class ListStream:
     lst: List[str]
 
     def pop_if(self, match):
-        v = self.lst[0]
+        v = self.lst[0] if self.lst else None
 
         if v == match:
             return self.pop()
@@ -28,7 +28,11 @@ class ListStream:
         return len(self.lst) == 0
 
     def __init__(self, s):
-        self.lst = [value.strip() for value in s.split(" ")]
+        self.lst = [(value.strip()) for value in s.split(" ")]
+        self.lst = list(filter(lambda v: v != "", self.lst))
+
+    def deepcopy(self):
+        return ListStream(' '.join(self.lst))
 
 
 class ProceduralMacroContext:
@@ -55,8 +59,8 @@ class ident:
     def parse(input: ListStream):
         v = input.peek()
         if isinstance(v, str):
-            return ident(_value=input.pop(0))
-        return None
+            return input, ident(_value=input.pop(0))
+        return input, None
 
     def out(self):
         return self._value
@@ -70,8 +74,8 @@ class number:
     def parse(input: ListStream):
         v = input.peek()
         if v.replace('.', '', 1).isdigit():
-            return ident(_value=input.pop(0))
-        return None
+            return input, ident(_value=input.pop(0))
+        return input, None
 
     def out(self):
         return self._value
