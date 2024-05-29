@@ -145,8 +145,16 @@ struct ProceduralMacroProfile
                    }
                    else 
                    {
-                    TEMP emitter.begin_indent("if (value := (t_input.pop_if(\"" + rule_value + "\"))):");
-                    emitter.writeln("return t_input, " + name + "(_value=value)");
+                    if (rule_value.size() == 1)
+                    {
+                      TEMP emitter.begin_indent("if (value := (t_input.pop_if('" + rule_value + "'))):");
+                      emitter.writeln("return t_input, " + name + "(_value=value)");
+                    }
+                    else
+                    {
+                      TEMP emitter.begin_indent("if (value := (t_input.pop_if(\"" + rule_value + "\"))):");
+                      emitter.writeln("return t_input, " + name + "(_value=value)");
+                    }
                    }
                    emitter.writeln("break");
                  }
@@ -189,8 +197,16 @@ struct ProceduralMacroProfile
                  }
                  else 
                  {
+                  if (rule_value.size() == 1)
+                  {
+                   TEMP emitter.begin_indent("if t_input.pop_if('" + rule_value + "'):");
+                   emitter.writeln("value = {}");
+                  }
+                  else
+                  {
                    TEMP emitter.begin_indent("if t_input.pop_if(\"" + rule_value + "\"):");
                    emitter.writeln("value = {}");
+                  }
                  }
                  TEMP emitter.begin_indent();
 
@@ -233,6 +249,12 @@ struct ProceduralMacroProfile
                    }
                    else 
                    {
+                     if (rule_value.size() == 1)
+                     {
+                       TEMP emitter.begin_indent("if not t_input.pop_if('" + rule_value + "'):");
+                       emitter.writeln("break");
+                     }
+                     else
                      {
                        TEMP emitter.begin_indent("if not t_input.pop_if(\"" + rule_value + "\"):");
                        emitter.writeln("break");
