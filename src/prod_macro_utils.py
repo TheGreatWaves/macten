@@ -59,7 +59,7 @@ class ident:
     @staticmethod
     def parse(input: ListStream):
         v = input.peek()
-        if isinstance(v, str):
+        if v.isidentifier():
             return input, {'ident': ident(_value=input.pop(0))}
         return input, None
 
@@ -69,7 +69,7 @@ class ident:
 
 @dataclass
 class number:
-    _value: str
+    _value: Any
 
     @staticmethod
     def parse(input: ListStream):
@@ -93,7 +93,7 @@ def node_print(node):
             print(f"{tmp}{type(child).__name__}")
             _node_print(child, prefix=prefix)
     else:
-        _node_print(node._value, prefix="|  ")
+        _node_print(node._value)
     print()
 
 
@@ -111,3 +111,21 @@ def _node_print(node, prefix=""):
             _node_print(child, prefix=prefix + ("|  " if not_last else "   "))
     else:
         _node_print(node._value, prefix=prefix)
+
+def parse_fn(ctx, name):
+    def parse(input: ListStream, ast: Any):
+        result_ast = None
+        t_input = input.deepcopy()
+        previous_size = len(t_input.lst)
+        while True:
+            result = ctx.get_rule(name)._parse(t_input, result_ast)
+            tmp_t_input, tmp_ast = result
+            current_size = len(tmp_t_input.lst) if tmp_t_input else previous_size
+            if current_size == previous_size or tmp_ast is None:
+                return t_input, result_ast
+            t_input = tmp_t_input
+            result_ast = tmp_ast
+            previous_size = current_size
+        return t_input, result_ast
+    return parse
+

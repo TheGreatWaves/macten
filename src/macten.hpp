@@ -685,8 +685,11 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
           // Add the rule 
           const auto rule_value_token = previous;
           entry.push_back(rule_value_token.lexeme);
+
+          if (rule_value_token.lexeme == rule_label) 
+            rule.second = true;
         }
-        rule.push_back(entry);
+        rule.first.push_back(entry);
       }
       while (match(Token::Pipe));
     }

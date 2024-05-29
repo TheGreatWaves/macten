@@ -28,7 +28,7 @@ namespace macten
  *
  * There are three seperate rules here, "type", "variable" and "declaration".
  */
- using ProceduralMacroRule = std::vector<std::vector<std::string>>;
+ using ProceduralMacroRule = std::pair<std::vector<std::vector<std::string>>, bool>;
 
 /**
  * The ProceduralMacroProfile struct is for storing definitions of procedural macros.
@@ -75,29 +75,44 @@ struct ProceduralMacroProfile
    // Return the empty rule.
    return this->rules[name];
   }
+
+  auto dump_parse(CodeEmitter& emitter, const std::string& name) -> void
+  {
+    emitter.writeln("@staticmethod");
+    TEMP emitter.begin_indent("def parse(input: ListStream, ast: Any):");
+    emitter.writeln("return parse_fn(ctx, \"" + name + "\")(input, ast)");
+  }
   
   /**
    * Dump python code for generating the rules.
    */
   auto dump_rules(CodeEmitter& emitter) -> void 
   {
-    for (const auto& [rule_name, rule_definition] : this->rules)
+    for (const auto& [rule_name, rule] : this->rules)
     {
+     const auto& [rule_definition, recursive] = rule;
+     const auto get_name = [&](const std::string& name) { return this->name + "_" + name; };
+     const auto name = get_name(rule_name);
      {
        emitter.writeln("@dataclass");
 
-       const auto get_name = [&](const std::string& name) { return this->name + "_" + name; };
-       const auto name = get_name(rule_name);
 
        TEMP emitter.begin_indent("class " + name + ":");
 
        emitter.writeln("_value: Any");
-
        emitter.newln();
 
+       // Parse rule recursively.
+       if (recursive)
        {
+         dump_parse(emitter, name);
+         emitter.newln();
+       }
+      
+       {
+         const std::string function_name = recursive ? "_parse" : "parse";
          emitter.writeln("@staticmethod");
-         TEMP emitter.begin_indent("def parse(input: ListStream, ast: Any):");
+         TEMP emitter.begin_indent("def " + function_name + "(input: ListStream, ast: Any):");
          {
            {
              TEMP emitter.begin_indent("if input.empty():");
@@ -238,13 +253,15 @@ struct ProceduralMacroProfile
        }
      }
      emitter.newln();
+     emitter.writeln("ctx.add_rule(\"" + name + "\", " + name + ")");
+     emitter.newln();
     }
   }
 
   auto dump_driver(CodeEmitter& emitter) -> void
   {
     emitter.section("Driver");
-    emitter.writeln("input = ListStream(\"\"\" foo : double ; int bar ; \"\"\")");
+    emitter.writeln("input = ListStream(\"\"\" # [ derive ; debug ] foo ; \"\"\")");
     emitter.writeln("ast = None");
     {
       TEMP emitter.begin_indent("while input and not input.empty():");
