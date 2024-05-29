@@ -1,6 +1,7 @@
 from dataclasses import dataclass
-from typing import List
+from typing import List, Any
 from numbers import Number
+
 
 
 @dataclass
@@ -53,13 +54,13 @@ class ProceduralMacroContext:
 
 @dataclass
 class ident:
-    _value: str
+    _value: Any
 
     @staticmethod
     def parse(input: ListStream):
         v = input.peek()
         if isinstance(v, str):
-            return input, ident(_value=input.pop(0))
+            return input, {'ident': ident(_value=input.pop(0))}
         return input, None
 
     def out(self):
@@ -74,7 +75,7 @@ class number:
     def parse(input: ListStream):
         v = input.peek()
         if v.replace('.', '', 1).isdigit():
-            return input, ident(_value=input.pop(0))
+            return input, {'number': ident(_value=input.pop(0))}
         return input, None
 
     def out(self):
@@ -109,5 +110,4 @@ def _node_print(node, prefix=""):
             print(f"{prefix}{tmp}{type(child).__name__}")
             _node_print(child, prefix=prefix + ("|  " if not_last else "   "))
     else:
-        print(f"{prefix}└─{type(node).__name__}")
-        _node_print(node._value, prefix=prefix + "   ")
+        _node_print(node._value, prefix=prefix)
