@@ -121,6 +121,8 @@ struct ProceduralMacroProfile
            for (const auto& rule_values : rule_definition)
            {
              if (rule_values.empty()) continue;
+
+             // Singular values.
              else if (rule_values.size() == 1)
              {
                const auto &rule_value = rule_values[0];
@@ -131,7 +133,7 @@ struct ProceduralMacroProfile
                    if (rules.contains(rule_value))
                    {
                     TEMP emitter.begin_indent("if (value := (" + get_name(rule_value) + ".parse(t_input, ast)))[1]:");
-                    emitter.writeln("return value[0], " + name + "(_value=value[1])");
+                    emitter.writeln("return value[0], " + name + "(_value={'" + rule_value + "': value[1]})");
                    }
                    else if (rule_value == "ident")
                    {
@@ -283,15 +285,17 @@ struct ProceduralMacroProfile
   auto dump_driver(CodeEmitter& emitter) -> void
   {
     emitter.section("Driver");
-    emitter.writeln("input = ListStream(\"\"\" # [ derive ; debug ] foo ; \"\"\")");
+    emitter.writeln("input = ListStream(\"\"\" \"\"\")");
     emitter.writeln("ast = None");
     {
       TEMP emitter.begin_indent("while input and not input.empty():");
       emitter.writeln("input, ast = " + this->name + "_" + this->last_rule + ".parse(input, ast)");
-      TEMP emitter.begin_indent("if ast is None:");
-      emitter.writeln("print(\"Something went wrong!\")");
+      {
+        TEMP emitter.begin_indent("if ast is None:");
+        emitter.writeln("print(\"Something went wrong!\")");
+      }
+      emitter.writeln("node_print(ast)");
     }
-    emitter.writeln("node_print(ast)");
   }
 
   /**
