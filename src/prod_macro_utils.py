@@ -91,6 +91,7 @@ class NodeUtils:
                 if isinstance(cursor._value, dict):
                     if len(cursor._value) == 1:
                         _, cursor = next(iter(cursor._value.items()))
+                        continue
                     else:
                         return None
                 return cursor._value
