@@ -56,6 +56,7 @@ class ProceduralMacroContext:
 class ident:
     _value: Any
 
+
     @staticmethod
     def parse(input: ListStream):
         v = input.peek()
@@ -80,6 +81,27 @@ class number:
 
     def out(self):
         return self._value
+
+@dataclass
+class Node:
+    name: str
+    _value: dict
+
+    @staticmethod
+    def new(name):
+        return Node(name=name, _value={})
+
+    def add_child(self, name, node):
+        self._value[name] = node
+        return self._value[name]
+
+    def new_child(self, name):
+        n = Node.new(name)
+        self._value[name] = n
+        return self._value[name]
+
+    def get_child(self, name):
+        return self._value.get(name)
 
 # Collection of node utility functions
 class NodeUtils:
