@@ -294,7 +294,7 @@ struct ProceduralMacroProfile
         TEMP emitter.begin_indent("if ast is None:");
         emitter.writeln("print(\"Something went wrong!\")");
       }
-      emitter.writeln("node_print(ast)");
+      emitter.writeln("NodeUtils.print(ast)");
     }
   }
 

@@ -81,36 +81,104 @@ class number:
     def out(self):
         return self._value
 
+# Collection of node utility functions
+class NodeUtils:
+    @staticmethod
+    def get(node, name="", singular=False):
+        if len(name) == 0:
+            cursor = node
+            while not isinstance(cursor, str):
+                if isinstance(cursor._value, dict):
+                    if len(cursor._value) == 1:
+                        _, cursor = next(iter(cursor._value.items()))
+                    else:
+                        return None
+                return cursor._value
+            return cursor
+        elif singular:
+            return NodeUtils.get(node._value.get(name))
+        else:
+            return node._value.get(name)
 
-def node_print(node):
-    print(f"{type(node).__name__}")
-    if isinstance(node._value, dict):
-        size = len(node._value)
-        for i, (key, child) in enumerate(node._value.items()):
-            not_last = i < size - 1
-            tmp = "├─" if not_last else "└─"
-            prefix = "|  " if not_last else "   "
-            print(f"{tmp}{type(child).__name__}")
-            _node_print(child, prefix=prefix)
-    else:
-        _node_print(node._value)
-    print()
+    # Note: only works with recursive rules.
+    @staticmethod
+    def into_list(node):
+        # None if:
+        # 1. Node is invalid
+        # 2. Node does not have a dict as a value
+        # 3. dict size is only 1
+        if node is None or not isinstance(node._value, dict) or len(node._value) == 1:
+            return None
+
+        result = []
+        node_name = type(node).__name__
+        node_name = node_name[node_name.find('_') + 1:]
+        size = len(node_name)
+
+        def get_name(node):
+            return type(node).__name__[-size:]
+
+        current = node
+
+        while get_name(current) == node_name:
+            filtered = filter(lambda v: v != node_name, current._value.keys())
+
+            entry = {}
+            for value in filtered:
+                entry[value] = current._value[value]
+            result.append(entry)
+
+            current = current._value.get(node_name)
+
+        return result
 
 
-def _node_print(node, prefix=""):
-    if isinstance(node, str):
-        print(f"{prefix}└─{node}")
-        return
+    @staticmethod
+    def print(node):
 
-    if isinstance(node._value, dict):
-        size = len(node._value)
-        for i, (key, child) in enumerate(node._value.items()):
-            not_last = i < size - 1
-            tmp = "├─" if not_last else "└─"
-            print(f"{prefix}{tmp}{type(child).__name__}")
-            _node_print(child, prefix=prefix + ("|  " if not_last else "   "))
-    else:
-        _node_print(node._value, prefix=prefix)
+        if isinstance(node, Node):
+            print(node.name)
+        else:
+            print(type(node).__name__)
+
+        if isinstance(node._value, dict):
+            size = len(node._value)
+            for i, (key, child) in enumerate(node._value.items()):
+                not_last = i < size - 1
+                tmp = "├─" if not_last else "└─"
+                prefix = "|  " if not_last else "   "
+
+                if isinstance(child, Node):
+                    print(f"{tmp}{child.name}")
+                else:
+                    print(f"{tmp}{type(child).__name__}")
+
+                NodeUtils._node_print(child, prefix=prefix)
+        else:
+            NodeUtils._node_print(node._value)
+        print()
+
+
+
+    @staticmethod
+    def _node_print(node, prefix=""):
+        if isinstance(node, str):
+            print(f"{prefix}└─{node}")
+            return
+
+        if isinstance(node._value, dict):
+            size = len(node._value)
+            for i, (key, child) in enumerate(node._value.items()):
+                not_last = i < size - 1
+                tmp = "├─" if not_last else "└─"
+                if isinstance(child, Node):
+                    print(f"{prefix}{tmp}{child.name}")
+                else:
+                    print(f"{prefix}{tmp}{type(child).__name__}")
+
+                NodeUtils._node_print(child, prefix=prefix + ("|  " if not_last else "   "))
+        else:
+            NodeUtils._node_print(node._value, prefix=prefix)
 
 def parse_fn(ctx, name):
     def parse(input: ListStream, ast: Any):

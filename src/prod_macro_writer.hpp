@@ -37,7 +37,7 @@ struct CodeEmitter
    this->comment("AUTO GENERATED CODE, DO NOT EDIT");
 
    this->section("Imports");
-   this->writeln("from prod_macro_utils import ListStream, ProceduralMacroContext, ident, number, node_print, parse_fn");
+   this->writeln("from prod_macro_utils import ListStream, ProceduralMacroContext, ident, number, parse_fn, NodeUtils");
    this->writeln("from typing import Any");
    this->writeln("from dataclasses import dataclass");
 
