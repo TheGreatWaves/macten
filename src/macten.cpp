@@ -10,7 +10,6 @@
 auto DeclarativeTemplate::apply(
      MactenWriter* env,
      const int index,
-     const std::string& indentation,
      macten::TokenStream<MactenAllToken>& target, 
      std::map<std::string, std::string> args
 ) const -> bool 
@@ -25,15 +24,15 @@ auto DeclarativeTemplate::apply(
 
    while (!view.is_at_end())
    {
-    const bool is_arg {
+    const bool _is_arg {
      view.match_sequence(TokenType::Dollar, TokenType::Identifier)
     };
     const bool is_macro_call { macten::utils::is_macro_call(view) };
 
 
-    const auto token = view.peek();
+    const auto _token = view.peek();
 
-    if (is_arg)
+    if (_is_arg)
     {
      const std::string argname = view.peek(1).lexeme;
      if (args.contains(argname))
@@ -49,10 +48,10 @@ auto DeclarativeTemplate::apply(
      }
      else
      {
-       temp_buffer.push_back(token);
+       temp_buffer.push_back(_token);
      }
     }
-    else if (is_macro_call & env->has_macro(token.lexeme))
+    else if (is_macro_call & env->has_macro(_token.lexeme))
     {
       auto arg_body = view.between(MactenAllToken::LSquare, MactenAllToken::RSquare, false);
       view.advance(arg_body.remaining_size()+3);
@@ -85,14 +84,14 @@ auto DeclarativeTemplate::apply(
         arg_body.advance();
       }
 
-      if (!env->match_and_execute_macro(temp_buffer, token.lexeme, args_string.str()))
+      if (!env->match_and_execute_macro(temp_buffer, _token.lexeme, args_string.str()))
       {
        return false;
       }
     }
     else 
     {
-     temp_buffer.push_back(token);
+     temp_buffer.push_back(_token);
     }
 
     view.advance();

@@ -45,8 +45,8 @@ struct TokenStream
    * Ctor.
    */
    TokenStreamView(const TokenStream* ts)
-   : m_current_pointer{0}
-   , m_max_size{ts->size()}
+   : m_max_size{ts->size()}
+   , m_current_pointer{0}
    , m_target{ts}
    {
    }
@@ -57,9 +57,9 @@ struct TokenStream
     * range of the view.
     */
    TokenStreamView(std::size_t start_index, std::size_t max_size, const TokenStream* ts)
-   : m_current_pointer{ start_index }
+   : m_max_size{ max_size }
+   , m_current_pointer{ start_index }
    , m_initial_start_pointer{ start_index }
-   , m_max_size{ max_size }
    , m_target{ ts }
    {
    }

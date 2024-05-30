@@ -18,105 +18,6 @@
 #include "macten_tokens.hpp"
 #include "macten_all_tokens.hpp"
 
-// Attemping to model switch case.
-/////////////////////////////////////////////////////////////////////
-
-struct ASTNode {
- inline virtual std::ostream& str(std::ostream& os) const = 0;
- inline friend std::ostream& operator<<(std::ostream& lhs, const ASTNode& rhs)
- {
-  return rhs.str(lhs);
- }
-};
-
-struct StringNode : public ASTNode
-{
- std::string value;
-
- inline virtual std::ostream& str(std::ostream& os) const 
- {
-  return os << '"' << value << '"';
- }
-
- static std::unique_ptr<StringNode> make(const std::string& s)
- {
-  auto node = std::make_unique<StringNode>();
-  node->value = s;
-  return node;
- };
-};
-
-struct NumberNode: public ASTNode
-{
- long number;
-
- inline virtual std::ostream& str(std::ostream& os) const 
- {
-  return os << number;
- }
-
- static std::unique_ptr<NumberNode> make(long n)
- {
-  auto node = std::make_unique<NumberNode>();
-  node->number = n;
-  return node;
- };
-};
-
-struct ReturnNode: public ASTNode 
-{
- std::unique_ptr<ASTNode> ret_value;
-
- inline virtual std::ostream& str(std::ostream& os) const 
- {
-  return os << "return " << *ret_value << ';';
- }
-
- static std::unique_ptr<ReturnNode> make(std::unique_ptr<ASTNode> n)
- {
-  auto node = std::make_unique<ReturnNode>();
-  node->ret_value = std::move(n);
-  return node;
- };
-};
-
-struct WordSwitchCase: public ASTNode
-{
- std::unique_ptr<ASTNode> case_value;
- std::unique_ptr<ASTNode> case_body;
-
- inline virtual std::ostream& str(std::ostream& os) const 
- {
-  return os << "case " << *case_value << ": {" << *case_body << "}";
- }
-
- static std::unique_ptr<WordSwitchCase> make(std::unique_ptr<ASTNode> cv, std::unique_ptr<ASTNode> cb)
- {
-  auto node = std::make_unique<WordSwitchCase>();
-  node->case_value = std::move(cv);
-  node->case_body = std::move(cb);
-  return node;
- };
-};
-
-struct WordSwitchStmt: public ASTNode
-{
- std::unique_ptr<ASTNode>              input;
- std::vector<std::unique_ptr<ASTNode>> cases;
-
- inline virtual std::ostream& str(std::ostream& os) const 
- {
-  os << "switch (" << *input << ") {\n";
-  for (const auto& c : cases)
-  {
-   os << "  " << *c << '\n';
-  }
-  os << '}';
-  return os;
- }
-};
-
-/////////////////////////////////////////////////////////////////////
 struct DeclarativeMacroParameter
 {
  enum class PatternMode
@@ -136,8 +37,8 @@ struct DeclarativeMacroParameter
   * Returns a parameter object with corresponds to the parameter input in the form of a stream view.
   */
  DeclarativeMacroParameter(macten::TokenStream<MactenToken>::TokenStreamView parameter_view)
- : pattern{}
- , pattern_mode(PatternMode::Normal)
+ : pattern_mode(PatternMode::Normal)
+ , pattern{}
  , variadic_pattern{}
  {
   if (parameter_view.peek().is(MactenToken::EndOfFile))
@@ -149,14 +50,14 @@ struct DeclarativeMacroParameter
   // Populate pattern and argument names.
   while (!parameter_view.is_at_end())
   {
-   const auto token = parameter_view.pop();
+   const auto tok = parameter_view.pop();
 
-    if (token.is(MactenToken::Dollar))
+    if (tok.is(MactenToken::Dollar))
     {
       if (parameter_view.peek().is(MactenToken::Identifier))
       {
        argument_names.push_back(parameter_view.pop().lexeme);
-       pattern.push_back(token);
+       pattern.push_back(tok);
       }
       else if (parameter_view.peek().is(MactenToken::LParen))
       {
@@ -192,7 +93,7 @@ struct DeclarativeMacroParameter
     }
     else
     {
-     pattern.push_back(token);
+     pattern.push_back(tok);
     }
   }
  }
@@ -405,7 +306,6 @@ public:
  [[nodiscard]] auto apply(
      MactenWriter* env,
      const int index,
-     const std::string& indentation,
      macten::TokenStream<MactenAllToken>& target, 
      std::map<std::string, std::string> args = {}
   ) const -> bool;
@@ -425,7 +325,8 @@ public:
   */
  [[nodiscard]] auto match(macten::TokenStream<MactenToken>::TokenStreamView view) const noexcept -> int 
  {
-  for (int index {0}; index < m_params.size(); index++)
+  auto size = static_cast<int>(m_params.size());
+  for (int index {0}; index < size; index++)
   {
 
    const auto& param = m_params[index];
@@ -725,7 +626,7 @@ class MactenWriter
 {
 private:
  using DeclarativeMacroRules = std::unordered_map<std::string, DeclarativeTemplate>;
- using TokenType = MactenAllToken;
+ using TType = MactenAllToken;
  inline static const std::map<std::string, std::string> EmptyArgList {};
 public:
 
@@ -768,16 +669,16 @@ public:
   {
    auto token = source_view.peek();
 
-   while (source_view.match_sequence(TokenType::Identifier, TokenType::Underscore)) 
+   while (source_view.match_sequence(TType::Identifier, TType::Underscore)) 
    {
-    if (source_view.peek(2).is(TokenType::Identifier))
+    if (source_view.peek(2).is(TType::Identifier))
     {
      token.lexeme += "_" + source_view.peek(2).lexeme;
      source_view.advance(2);
     } 
     else
     {
-     while (source_view.peek(1).is(TokenType::Underscore))
+     while (source_view.peek(1).is(TType::Underscore))
      {
       token.lexeme += "_";
       source_view.advance(1);
@@ -790,8 +691,8 @@ public:
    if (macro_call_found && has_macro(token.lexeme))
    {
     // Move onto the '['.
-    source_view.skip_until(TokenType::LSquare);
-    if (!source_view.consume(TokenType::LSquare)) return false;
+    source_view.skip_until(TType::LSquare);
+    if (!source_view.consume(TType::LSquare)) return false;
 
     const auto args = source_view.between(MactenAllToken::LSquare, MactenAllToken::RSquare);
     source_view.advance(args.remaining_size());
@@ -842,7 +743,7 @@ public:
      }
 
 
-     bool success = macro_rule.apply(this, idx, "", target, args_mapping.value());
+     bool success = macro_rule.apply(this, idx, target, args_mapping.value());
      if (!success)
      {
       std::cerr << "Something went really wrong...\n";
@@ -861,7 +762,7 @@ public:
  /**
   * Skip macro definition. This removes the macten definitions from the source code.
   */
- auto skip_macro_definition(macten::TokenStream<MactenAllToken>::TokenStreamView& view, macten::TokenStream<MactenAllToken>& target) -> void
+ auto skip_macro_definition(macten::TokenStream<MactenAllToken>::TokenStreamView& view) -> void
  {
   using TokenType = MactenAllToken;
   view.skip(TokenType::Space, TokenType::Tab, TokenType::Newline, TokenType::Identifier);
@@ -946,7 +847,7 @@ public:
 
    if (token.is(TokenType::DeclarativeDefinition))
    {
-    skip_macro_definition(source_view, processed_tokens);
+    skip_macro_definition(source_view);
     continue;
    }
    else if (token.is(TokenType::Identifier) 
@@ -995,9 +896,9 @@ public:
   auto source_tokens_view = source_tokens.get_view();
   const auto res = apply_macro_rules(result_tokens, source_tokens_view);
 
-  std::cout << "Result\n======================================================\n";
-  std::cout << result_tokens.construct();
-  std::cout << "\n======================================================\n";
+  // std::cout << "Result\n======================================================\n";
+  // std::cout << result_tokens.construct();
+  // std::cout << "\n======================================================\n";
 
   return res;
  }

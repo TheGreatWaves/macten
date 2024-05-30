@@ -56,31 +56,31 @@ struct ProceduralMacroProfile
   /**
    * Set procedural macro profile name.
    */
-  auto set_name(const std::string& name) -> void
+  auto set_name(const std::string& rule_name) -> void
   {
-    this->name = name;
+    this->name = rule_name;
   }
 
   /**
    * Create a new rule and return a reference to it.
    */
-  auto create_rule(const std::string& name) -> ProceduralMacroRule&
+  auto create_rule(const std::string& rule_name) -> ProceduralMacroRule&
   {
    // Create an empty rule with the given name.
    // Note: This could potentially overwrite any 
    //
    // previously defined rule with the same name.
-   this->rules[name] = {};
+   this->rules[rule_name] = {};
 
    // Return the empty rule.
-   return this->rules[name];
+   return this->rules[rule_name];
   }
 
-  auto dump_parse(CodeEmitter& emitter, const std::string& name) -> void
+  auto dump_parse(CodeEmitter& emitter, const std::string& rule_name) -> void
   {
     emitter.writeln("@staticmethod");
     TEMP emitter.begin_indent("def parse(input: ListStream, ast: Any):");
-    emitter.writeln("return parse_fn(ctx, \"" + name + "\")(input, ast)");
+    emitter.writeln("return parse_fn(ctx, \"" + rule_name + "\")(input, ast)");
   }
   
   /**
@@ -88,16 +88,16 @@ struct ProceduralMacroProfile
    */
   auto dump_rules(CodeEmitter& emitter) -> void 
   {
-    for (const auto& [rule_name, rule] : this->rules)
+    for (const auto& [_rule_name, rule] : this->rules)
     {
      const auto& [rule_definition, recursive] = rule;
-     const auto get_name = [&](const std::string& name) { return this->name + "_" + name; };
-     const auto name = get_name(rule_name);
+     const auto get_name = [&](const std::string& _name) { return this->name + "_" + _name; };
+     const auto _name = get_name(_rule_name);
      {
        emitter.writeln("@dataclass");
 
 
-       TEMP emitter.begin_indent("class " + name + ":");
+       TEMP emitter.begin_indent("class " + _name + ":");
 
        emitter.writeln("_value: Any");
        emitter.newln();
@@ -105,7 +105,7 @@ struct ProceduralMacroProfile
        // Parse rule recursively.
        if (recursive)
        {
-         dump_parse(emitter, name);
+         dump_parse(emitter, _name);
          emitter.newln();
        }
       
@@ -133,29 +133,29 @@ struct ProceduralMacroProfile
                    if (rules.contains(rule_value))
                    {
                     TEMP emitter.begin_indent("if (value := (" + get_name(rule_value) + ".parse(t_input, ast)))[1]:");
-                    emitter.writeln("return value[0], " + name + "(_value={'" + rule_value + "': value[1]})");
+                    emitter.writeln("return value[0], " + _name + "(_value={'" + rule_value + "': value[1]})");
                    }
                    else if (rule_value == "ident")
                    {
                     TEMP emitter.begin_indent("if (value := (ident.parse(t_input))):");
-                    emitter.writeln("return value[0], " + name + "(_value=value[1])");
+                    emitter.writeln("return value[0], " + _name + "(_value=value[1])");
                    }
                    else if (rule_value == "number")
                    {
                     TEMP emitter.begin_indent("if (value := (number.parse(t_input))):");
-                    emitter.writeln("return value[0], " + name + "(_value=value[1])");
+                    emitter.writeln("return value[0], " + _name + "(_value=value[1])");
                    }
                    else 
                    {
                     if (rule_value.size() == 1)
                     {
                       TEMP emitter.begin_indent("if (value := (t_input.pop_if('" + rule_value + "'))):");
-                      emitter.writeln("return t_input, " + name + "(_value=value)");
+                      emitter.writeln("return t_input, " + _name + "(_value=value)");
                     }
                     else
                     {
                       TEMP emitter.begin_indent("if (value := (t_input.pop_if(\"" + rule_value + "\"))):");
-                      emitter.writeln("return t_input, " + name + "(_value=value)");
+                      emitter.writeln("return t_input, " + _name + "(_value=value)");
                     }
                    }
                    emitter.writeln("break");
@@ -164,49 +164,49 @@ struct ProceduralMacroProfile
              }
              else
              {
-               const auto &rule_value = rule_values[0];
+               const auto &_rule_value = rule_values[0];
                {
                  TEMP emitter.begin_indent("while True:");
                  emitter.writeln("t_input = input.deepcopy()");
-                 if (rules.contains(rule_value))
+                 if (rules.contains(_rule_value))
                  {
-                   const auto rule_name = get_name(rule_value);
+                   const auto rule_name = get_name(_rule_value);
 
                    // Handle recursive self case
-                  if (rule_name == name)
+                  if (rule_name == _name)
                   {
-                    TEMP emitter.begin_indent("if isinstance(ast, " + name + "):");
-                    emitter.writeln("value = {\"" + rule_value + "\": ast}");
+                    TEMP emitter.begin_indent("if isinstance(ast, " + _name + "):");
+                    emitter.writeln("value = {\"" + _rule_value + "\": ast}");
                   }
                   else 
                   {
                     TEMP emitter.begin_indent("if (value := (" + rule_name + ".parse(t_input, ast)))[1]:");
                     emitter.writeln("t_input, ast = value");
-                    emitter.writeln("value = {\"" + rule_value + "\": ast}");
+                    emitter.writeln("value = {\"" + _rule_value + "\": ast}");
                   }
                  }
-                 else if (rule_value == "ident")
+                 else if (_rule_value == "ident")
                  {
                    TEMP emitter.begin_indent("if (value := (ident.parse(t_input)))[1]:");
                    emitter.writeln("t_input, ast = value");
-                   emitter.writeln("value = {\"" + rule_value + "\": ast}");
+                   emitter.writeln("value = {\"" + _rule_value + "\": ast}");
                  }
-                 else if (rule_value == "number")
+                 else if (_rule_value == "number")
                  {
                    TEMP emitter.begin_indent("if (value := (number.parse(t_input)))[1]:");
                    emitter.writeln("t_input, ast = value");
-                   emitter.writeln("value = {\"" + rule_value + "\": ast}");
+                   emitter.writeln("value = {\"" + _rule_value + "\": ast}");
                  }
                  else 
                  {
-                  if (rule_value.size() == 1)
+                  if (_rule_value.size() == 1)
                   {
-                   TEMP emitter.begin_indent("if t_input.pop_if('" + rule_value + "'):");
+                   TEMP emitter.begin_indent("if t_input.pop_if('" + _rule_value + "'):");
                    emitter.writeln("value = {}");
                   }
                   else
                   {
-                   TEMP emitter.begin_indent("if t_input.pop_if(\"" + rule_value + "\"):");
+                   TEMP emitter.begin_indent("if t_input.pop_if(\"" + _rule_value + "\"):");
                    emitter.writeln("value = {}");
                   }
                  }
@@ -263,7 +263,7 @@ struct ProceduralMacroProfile
                      }
                    }
                  }
-                 emitter.writeln("return t_input, " + name + "(_value=value)");
+                 emitter.writeln("return t_input, " + _name + "(_value=value)");
                }
                {
                  TEMP emitter.begin_indent();     
@@ -277,7 +277,7 @@ struct ProceduralMacroProfile
        }
      }
      emitter.newln();
-     emitter.writeln("ctx.add_rule(\"" + name + "\", " + name + ")");
+     emitter.writeln("ctx.add_rule(\"" + _name + "\", " + _name + ")");
      emitter.newln();
     }
   }

@@ -54,8 +54,8 @@ namespace cpp20trie
         struct FixedStringImpl
         {
             constexpr FixedStringImpl(const char (&str)[N]) noexcept { std::copy_n(str, N, val); }
-            constexpr auto empty() const noexcept -> const bool { return size() == 0; }
-            constexpr auto head() const noexcept -> const char { return val[0]; }
+            constexpr auto empty() const noexcept -> bool { return size() == 0; }
+            constexpr auto head() const noexcept -> char { return val[0]; }
             static constexpr auto size() noexcept -> std::size_t{ return N; };
             constexpr auto tail() const noexcept -> FixedStringImpl<((N != 1) ? N - 1 : 1)>
             {
@@ -118,7 +118,7 @@ namespace cpp20trie
         template <typename... Transitions>
         struct TrieNode : Transitions... {};
 
-        constexpr auto check_trie(TrieNode<> trie, std::string_view str, auto&& fne, auto&&... fns) 
+        constexpr auto check_trie(TrieNode<>, std::string_view, auto&& fne, auto&&...) 
         noexcept -> decltype(fne())
         {
             return fne();
@@ -126,7 +126,7 @@ namespace cpp20trie
 
         // This case is only true when we have exactly one transition.
         template <int Char, typename Next, typename = Specialize<(Char >= 0)>>
-        constexpr auto check_trie(TrieNode<Transition<Char, Next>> trie, std::string_view str, auto&& fne, auto&&... fns) 
+        constexpr auto check_trie(TrieNode<Transition<Char, Next>>, std::string_view str, auto&& fne, auto&&... fns) 
         noexcept -> decltype(fne())
         {
             return (!str.empty() && (str[0] == Char))
@@ -199,7 +199,7 @@ namespace cpp20trie
             if constexpr (!std::is_same_v<decltype(default_function()), void>)
             {
                 auto ret = default_function();
-                std::initializer_list<int>({ (index == std::get<Is>(std::move(chars)) ? (ret = func.template operator()<Is>()), 0 : 0)...} );
+                std::initializer_list<int>({ (index == static_cast<std::size_t>(std::get<Is>(std::move(chars))) ? (ret = func.template operator()<Is>()), 0 : 0)...} );
                 return ret;
             }
             else
@@ -1292,7 +1292,7 @@ TOKEN(Identifier)
     /**
      * Return the current character and advance to the next.
      */
-    const char advance() noexcept
+    char advance() noexcept
     {
         return source_code.at(current++);
     }
@@ -1317,7 +1317,7 @@ TOKEN(Identifier)
      * Offset is defaulted to 0, returning the current character without
      * changing the position of the current position.
      */
-    const char peek(std::size_t offset = 0) noexcept
+    char peek(std::size_t offset = 0) noexcept
     {
         if (current + offset >= this->source_code.length())
             return '\0';
