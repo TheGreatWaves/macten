@@ -4,6 +4,6 @@
 
 auto main() -> int 
 {
- MactenWriter writer("../examples/python/basic_declarative_macro.py", "throwaway.txt");
+ MactenWriter writer("../examples/cpp/switch.cpp", "throwaway.txt");
  writer.process();
 }

@@ -32,3 +32,4 @@ SYMBOL_TOKEN(Newline,     "\n")
 SYMBOL_TOKEN(Tab,         "\t")
 
 KEYWORD_TOKEN(DeclarativeDefinition, "defmacten_dec")
+KEYWORD_TOKEN(ProceduralDefinition,  "defmacten_proc")

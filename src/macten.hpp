@@ -9,6 +9,7 @@
 #include <vector>
 #include <optional>
 #include <unordered_map>
+#include <unordered_set>
 #include <memory>
 
 #include "prod_macro_writer.hpp"
@@ -550,6 +551,7 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
     consume(MactenToken::Identifier, "Expected macro name, found: '" + previous.lexeme + "'.");
     const auto macro_name = previous.lexeme;
     profile.set_name(macro_name);
+    m_prod_macros.push_back(macro_name);
 
     // Start parsing procedural macro body.
     consume(Token::LBrace, "Expected macro body, missing '{', found: '" + previous.lexeme + "'.");
@@ -617,6 +619,7 @@ class DeclarativeMacroParser : public cpp20scanner::BaseParser<MactenTokenScanne
   }
  public: 
  std::vector<DeclarativeMacroDetail> m_macros;
+ std::vector<std::string>            m_prod_macros;
  macten::CodeEmitter                 emitter;
 };
 
@@ -626,6 +629,7 @@ class MactenWriter
 {
 private:
  using DeclarativeMacroRules = std::unordered_map<std::string, DeclarativeTemplate>;
+ using ProceduralMacroRules = std::unordered_set<std::string>;
  using TType = MactenAllToken;
  inline static const std::map<std::string, std::string> EmptyArgList {};
 public:
@@ -648,6 +652,11 @@ public:
    std::for_each(parser.m_macros.begin(), parser.m_macros.end(), [this](const auto& macro_detail) {
      m_declarative_macro_rules[macro_detail.m_name] = macro_detail.construct_template();
    });
+
+   std::for_each(parser.m_prod_macros.begin(), parser.m_prod_macros.end(), [this](const auto& prod_macro_name) {
+     m_procedural_macro_rules.insert(prod_macro_name);
+   });
+
   }
   return res;
  }
@@ -845,7 +854,7 @@ public:
   {
    const auto token = source_view.pop();
 
-   if (token.is(TokenType::DeclarativeDefinition))
+   if (token.any_of(TokenType::ProceduralDefinition,TokenType::DeclarativeDefinition))
    {
     skip_macro_definition(source_view);
     continue;
@@ -915,6 +924,7 @@ private:
  const std::string     m_source_path;
  const std::string     m_output_name;
  DeclarativeMacroRules m_declarative_macro_rules;
+ ProceduralMacroRules  m_procedural_macro_rules;
 };
 
 #endif /* MACTEN_H */
