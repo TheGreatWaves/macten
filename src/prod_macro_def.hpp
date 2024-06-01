@@ -118,9 +118,18 @@ struct ProceduralMacroProfile
              TEMP emitter.begin_indent("if input.empty():");
              emitter.writeln("return None, None");
            }
+
+           bool can_be_empty = false;
+
            for (const auto& rule_values : rule_definition)
            {
-             if (rule_values.empty()) continue;
+
+             // The rule is optional.
+             if (rule_values.empty())
+             {
+               can_be_empty = true;
+               continue;
+             }
 
              // Singular values.
              else if (rule_values.size() == 1)
@@ -272,7 +281,14 @@ struct ProceduralMacroProfile
              }
 
            }
-           emitter.writeln("return None, None");
+           if (can_be_empty)
+           {
+             emitter.writeln("return input, " + _name + "(_value=None)");
+           }
+           else
+           {
+             emitter.writeln("return None, None");
+           }
          }
        }
      }
