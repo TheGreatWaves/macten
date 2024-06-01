@@ -8,6 +8,39 @@ from numbers import Number
 class ListStream:
     lst: List[str]
 
+    @staticmethod
+    def from_string(input: str):
+        head = 0
+        tail = 0
+        size = len(input)
+
+        lst = []
+
+        while tail < size:
+            head = tail
+            char = input[tail]
+
+            # skip white space
+            while char == ' ' or char == '\n':
+                tail += 1
+                head = tail
+                if tail < size:
+                    char = input[tail]
+                else:
+                    return ListStream(lst=lst)
+
+            # Group identifier
+            if char.isidentifier():
+                tail += 1
+                while tail < size and input[tail].isalnum():
+                    tail += 1
+                lst.append(input[head:tail])
+            else:
+                lst.append(input[tail])
+                tail += 1
+
+        return ListStream(lst=lst)
+
     def pop_if(self, match):
         v = self.lst[0] if self.lst else None
 
@@ -28,12 +61,14 @@ class ListStream:
     def empty(self):
         return len(self.lst) == 0
 
-    def __init__(self, s):
-        self.lst = [(value.strip()) for value in s.split(" ")]
-        self.lst = list(filter(lambda v: v != "", self.lst))
+    @staticmethod
+    def from_raw(s):
+        lst = [(value.strip()) for value in s.split(" ")]
+        lst = list(filter(lambda v: v != "", lst))
+        return ListStream(lst=lst)
 
     def deepcopy(self):
-        return ListStream(' '.join(self.lst))
+        return ListStream(self.lst.copy())
 
 
 class ProceduralMacroContext:
@@ -187,9 +222,9 @@ class NodeUtils:
     def _node_print(node, prefix=""):
         if isinstance(node, str):
             print(f"{prefix}└─{node}")
-            return
-
-        if isinstance(node._value, dict):
+        elif node is None:
+            print(f"{prefix}└─None")
+        elif isinstance(node._value, dict):
             size = len(node._value)
             for i, (key, child) in enumerate(node._value.items()):
                 not_last = i < size - 1
