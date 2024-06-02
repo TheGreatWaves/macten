@@ -146,34 +146,59 @@ The abstract syntax tree can be generated using user defined parsing rules in th
 We can take some inspiration from `lex` and `yacc`. The user can define parse rules by defining what an expression looks like.
 
 For example, we could define a variable declaration statement like this:
-```yacc
-type := int
-      | float
-      | ident
-variable := ident
-declaration := type variable;
 ```
-Given:
-```cpp
-int a;
+defmacten_proc declaration {
+    varname { ident }
+    type { string } | { int }
+    declaration { varname: type; }
+}
+```
+
+Here, `ident` is a special built-in rule for capturing any lexeme which qualifies as an identifier.
+
+So given an input which looks like this:
+```rust
+foo: int;
 ```
 We can retrive the following AST:
 ```
 declaration
 ├── type
 │   └── int
-└── variable
+└── varname
     └── ident
-        └── a
+        └── foo
 ```
 
-# AST Facility
-Now that we have the AST, we can mutate it to reflect what we want.
-
-# Translation
-We can define syntax generation rules for a given AST node. Let's say that we would like to turn `int a;` to `a: int;`, we can define the following generation rule:
-```cpp
-declaration #= {
-    variable: type;
+# Recursive Rules
+Rules can be recursively parsed.
+```
+defmacten_proc declaration {
+    varname { ident }
+    type { string } | { int }
+    declaration { varname: type; }
+    declarations { declarations declaration } | { declaration }
 }
+```
+Meaning this:
+```rust
+foo1: int;
+foo2: int;
+```
+Gets parsed into:
+```
+declarations
+├── declaration
+│    ├── type
+│    │    └── int
+│    └── varname
+│         └── ident
+│              └── foo1
+└── declarations
+     └── declaration
+         ├── type
+         │    └── int
+         └── varname
+              └── ident
+                   └── foo2
 ```
