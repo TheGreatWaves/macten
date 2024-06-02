@@ -202,3 +202,32 @@ declarations
               └── ident
                    └── foo2
 ```
+# Helper Library
+A basic library is included for dealing with ASTs. For example, given `declarations`, we can collect all of the `declaration` nodes in an array using `NodeUtils.into_list`:
+```py
+ast = declaration_declarations.parse(input)
+
+# NodeUtils.into_list simply collects all children except one with the same name
+# as the parent node. So here, we simply collect: 
+# [{'declaration': declaration_declaration(...), ...}]
+declarations = NodeUtils.into_list(ast)
+
+# now we can extract the value from the list of dicts
+# [declaration_declaration(...), ...]
+declarations = [d['declaration'] for d in declarations]
+```
+
+To retrieve a child node, use `NodeUtils.get(parent, child_name, singular?)`. When singular is specified to be true, the deepest single value will be returned. This only works if the specified child node of the parent only has one child, and this remains true all the way down the tree.
+
+An example illustrates this best:
+```py
+# parse `declaration` (not plural)
+input = ListStream.from_string("foo: int;")
+ast = declaration_declaration.parse(input)
+
+# returns "foo" (string)
+varname = NodeUtils.get(ast, 'varname', singular=True)
+
+# returns declaration_varname(...) (node)
+varname_node = NodeUtils.get(ast, 'varname')
+```
