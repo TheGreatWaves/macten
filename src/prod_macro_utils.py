@@ -30,9 +30,9 @@ class ListStream:
                     return ListStream(lst=lst)
 
             # Group identifier
-            if char.isidentifier():
+            if char.isidentifier() or char == "_":
                 tail += 1
-                while tail < size and input[tail].isalnum():
+                while tail < size and input[tail].isalnum() or input[tail] == "_":
                     tail += 1
                 lst.append(input[head:tail])
             else:
