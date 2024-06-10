@@ -7,8 +7,8 @@
  * Note that the expansion is recursive, which is why we need to pass in MactenWriter pointer so we can further expand the contents of our macro expansion.
  * TODO: Better error diagnostics would be great.
  */
-auto DeclarativeTemplate::apply(
-     MactenWriter* env,
+auto macten::DeclarativeTemplate::apply(
+     macten::MactenWriter* env,
      const int index,
      macten::TokenStream<MactenAllToken>& target, 
      std::map<std::string, std::string> args

@@ -94,6 +94,14 @@ struct TokenStream
   }
 
   /**
+   * Returns true if the top token is the same as `expected`.
+   */
+  [[nodiscard]] auto front_is(TokenType expected) const noexcept -> bool
+  {
+   return peek().is(expected);
+  }
+
+  /**
    * Returns the top Token with an offset.
    */
   [[nodiscard]] auto peek_back(std::size_t offset = 1) const noexcept -> Token
@@ -118,7 +126,7 @@ struct TokenStream
   /**
    * Create a sub view.
    */
-  [[nodiscard]] auto sub_view(std::size_t size = 0) -> TokenStreamView
+  [[nodiscard]] auto sub_view(std::size_t size = 0) const noexcept -> TokenStreamView
   {
     return TokenStreamView{
      m_current_pointer,
@@ -297,6 +305,14 @@ struct TokenStream
      m_current_pointer + offset,       // Size
      m_target
    };
+ }
+
+ /**
+  * Is at end.
+  */
+ [[nodiscard]] auto is_exhausted() const noexcept -> bool 
+ {
+  return front_is(TokenType::EndOfFile);
  }
 
  private:
