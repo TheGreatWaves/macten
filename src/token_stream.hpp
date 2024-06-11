@@ -8,6 +8,7 @@
 
 // This is required for the Token class.
 #include "macten_all_tokens.hpp"
+#include "macten_tokens.hpp"
 
 namespace macten
 {
@@ -327,6 +328,8 @@ struct TokenStream
   inline static Token m_eof_token = Token();
  };
 
+ using View = TokenStreamView;
+
 
  /**
   * Methods.
@@ -460,6 +463,12 @@ struct TokenStream
   */
  std::vector<Token> m_tokens;
 };
+
+/* TokenStream */
+using TS = TokenStream<MactenToken>;
+
+/* AllTokenStream */
+using ATS = TokenStream<MactenAllToken>;
 
 } // namespace macten
 
