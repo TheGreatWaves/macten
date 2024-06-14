@@ -35,11 +35,12 @@
 #error "TOKEN_CLASS_NAME not specified."
 #endif
 
-#include <iostream>
 
 #ifndef COMPILE_TIME_TRIE_H
 #define COMPILE_TIME_TRIE_H
 
+#include <iostream>
+#include <sstream>
 #include <algorithm>
 #include <string_view>
 #include <tuple>
@@ -585,6 +586,11 @@ struct Token
      return type == t;        
     }
 
+    [[nodiscard]] auto lexically_eq(const Token& other) const noexcept -> bool
+    {
+        return lexeme == other.lexeme;
+    }
+
     template <std::same_as<TokenType>... TokenTypes>
     [[nodiscard]] auto any_of(TokenTypes... types) const noexcept -> bool
     {
@@ -666,6 +672,26 @@ class BaseParser
      * Consume the current token if it matches what we expect,
      * else we report error.
      */
+    auto consume(TokenType type) noexcept -> void
+    {
+        if (current.type == type)
+        {
+            advance();
+            return;
+        }
+        
+        std::stringstream message {};
+        message << "Expected <"; 
+        message << type.name();
+        message << ">, found '";
+        message << current.lexeme;
+        message << "' (type:";
+        message << current.type.name();
+        message << ").";
+
+        report_error(message.str());
+    }
+    
     auto consume(TokenType type, std::string_view message) noexcept -> void
     {
         if (current.type == type)
@@ -673,7 +699,16 @@ class BaseParser
             advance();
             return;
         }
-        report_error(message);
+        
+        std::stringstream _message {};
+        _message << message;
+        _message << ", found '";
+        _message << current.lexeme;
+        _message << "' (type:";
+        _message << current.type.name();
+        _message << ").";
+
+        report_error(_message.str());
     }
 
     /**
@@ -1179,10 +1214,31 @@ TOKEN(Identifier)
     }
 
     /**
+     * Increment line number.
+     */
+    void increment_line_number() noexcept 
+    {
+        std::size_t index {0};
+        bool is_newline = false;
+        char c {' '};
+
+        do 
+        {
+            if (is_newline) { line++; }
+            c = peek(index++);
+        } 
+        while ((is_newline = (c == '\n')) 
+             || c == '\t' 
+             || c == ' ');
+    }
+
+    /**
      * Return the next token.
      */
     [[nodiscard]] cpp20scanner::Token<TOKEN_CLASS_NAME> scan_token() noexcept
     {
+        increment_line_number();
+        
         skip_whitespace();
         start = current;
 
