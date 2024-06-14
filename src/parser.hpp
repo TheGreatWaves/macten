@@ -1,17 +1,18 @@
 #ifndef MACTEN_PASER_HPP
 #define MACTEN_PASER_HPP
 
-#include "macten_tokens.hpp"
-#include "macten_all_tokens.hpp"
-#include "token_stream.hpp"
+#include <sstream>
 
+#include "macten_all_tokens.hpp"
+#include "macten_tokens.hpp"
+#include "token_stream.hpp"
 
 class MactenParser final : public cpp20scanner::BaseParser<MactenTokenScanner, MactenToken>
 {
   private:
-    using Token = MactenToken;
-    using AllToken = MactenAllToken;
-    using TokenStream = macten::TokenStream<Token>;
+    using Token          = MactenToken;
+    using AllToken       = MactenAllToken;
+    using TokenStream    = macten::TokenStream<Token>;
     using AllTokenStream = macten::TokenStream<MactenAllToken>;
 
   public:
@@ -26,6 +27,9 @@ class MactenParser final : public cpp20scanner::BaseParser<MactenTokenScanner, M
      */
     constexpr MactenParser() = delete;
 
+    /**
+     * Main Macten parse loop.
+     */
     [[nodiscard]] auto parse() noexcept -> bool
     {
         advance();
@@ -51,6 +55,29 @@ class MactenParser final : public cpp20scanner::BaseParser<MactenTokenScanner, M
     }
 
     /**
+     * Parse the current argument and populate macro tokens pattern and argument names.
+     *
+     * For example, if we parse `$hello`, we will have the token pattern of {<dollar><identifer>}.
+     * If the input does not contain a parameter ($), then we only populate the token pattern.
+     */
+    auto parse_arg(std::vector<Token>& macro_tokens, std::vector<std::string>& macro_args) -> void 
+    {
+        if (match(Token::Dollar))
+        {
+            macro_tokens.push_back(previous.type);
+
+            const auto arg_name = consume_identifier("Expected argument name");
+            macro_args.push_back(arg_name);
+        }
+        else
+        {
+            advance();
+        }
+
+        macro_tokens.push_back(previous.type);
+    }
+
+    /**
      * Return a vector of tokens expected by the argument list that
      * is currently being parsed.
      *
@@ -58,7 +85,7 @@ class MactenParser final : public cpp20scanner::BaseParser<MactenTokenScanner, M
      */
     auto parse_args() noexcept -> std::pair<std::vector<std::string>, std::vector<Token>>
     {
-        std::vector<Token> macro_tokens{};
+        std::vector<Token>       macro_tokens{};
         std::vector<std::string> macro_args{};
 
         // Move into the body of the '('.
@@ -79,26 +106,18 @@ class MactenParser final : public cpp20scanner::BaseParser<MactenTokenScanner, M
                 }
             }
 
-            if (match(Token::Dollar))
-            {
-                macro_tokens.push_back(previous.type);
-                const auto arg_name = consume_identifier("Expected argument name.");
-                macro_args.push_back(arg_name);
-                macro_tokens.push_back(previous.type);
-            }
-            else
-            {
-                advance();
-                const auto consumed = previous.lexeme;
-                macro_tokens.push_back(previous.type);
-            }
+            parse_arg(macro_tokens, macro_args);
         }
 
         return {std::move(macro_args), std::move(macro_tokens)};
     }
 
+    /**
+     * Parse identifier.
+     */
     auto consume_identifier(std::string_view message) -> std::string
     {
+        std::stringstream ss {};
         consume(Token::Identifier, message);
         return previous.lexeme;
     }
@@ -108,9 +127,8 @@ class MactenParser final : public cpp20scanner::BaseParser<MactenTokenScanner, M
      */
     auto declarative_definition() -> void
     {
-
-        const auto macro_name = consume_identifier("Expected macro name, found: " + previous.lexeme + ".");
-        consume(Token::LBrace, "Expected macro body, missing '{', found: '" + previous.lexeme + "'.");
+        const auto macro_name = consume_identifier("Expected macro name");
+        consume(Token::LBrace, "Expected macro body, missing '{'");
 
         std::vector<std::string>               branch_bodies;
         std::vector<DeclarativeMacroParameter> branch_parameters;
@@ -118,20 +136,18 @@ class MactenParser final : public cpp20scanner::BaseParser<MactenTokenScanner, M
         while (!match(Token::RBrace))
         {
             const auto parameter_signature = this->scanner.scan_body(Token::LParen, Token::RParen);
-            const auto parameter_signature_stream =
-                TokenStream::from_string(parameter_signature.lexeme);
+            const auto parameter_signature_stream = TokenStream::from_string(parameter_signature.lexeme);
             const auto parameter_signature_view = parameter_signature_stream.get_view();
             advance();
 
             branch_parameters.emplace_back(parameter_signature_view);
 
-            consume(Token::RParen,
-                    "Expected arguments, missing ')', found: '" + current.lexeme + "'.");
+            consume(Token::RParen, "Expected arguments, missing ')'");
 
             std::vector<std::string> macro_args{};
-            std::vector<Token> macro_tokens{};
+            std::vector<Token>       macro_tokens{};
 
-            consume(Token::Equal, "Expected '=', found: '" + current.lexeme + "'.");
+            consume(Token::Equal, "Expected '='");
             consume(Token::GreaterThan, "Expected '>'");
 
             if (check(Token::LBrace))
@@ -139,8 +155,8 @@ class MactenParser final : public cpp20scanner::BaseParser<MactenTokenScanner, M
                 scanner.skip_whitespace();
                 const auto macro_body_token = this->scanner.scan_body(Token::LBrace, Token::RBrace);
 
-                const auto token_stream = AllTokenStream::from_string(macro_body_token.lexeme);
-                auto token_stream_view = token_stream.get_view();
+                const auto token_stream      = AllTokenStream::from_string(macro_body_token.lexeme);
+                auto       token_stream_view = token_stream.get_view();
 
                 AllTokenStream token_stream_result;
 
@@ -195,18 +211,17 @@ class MactenParser final : public cpp20scanner::BaseParser<MactenTokenScanner, M
         macten::ProceduralMacroProfile profile{};
 
         // Retrieve macro name.
-        const auto macro_name = consume_identifier("Expected macro name, found: '" + previous.lexeme + "'.");
+        const auto macro_name = consume_identifier("Expected macro name");
         profile.set_name(macro_name);
         m_prod_macros.push_back(macro_name);
 
         // Start parsing procedural macro body.
-        consume(Token::LBrace,
-                "Expected macro body, missing '{', found: '" + previous.lexeme + "'.");
+        consume(Token::LBrace, "Expected macro body, missing '{'");
 
         while (!match(Token::EndOfFile) && !match(Token::RBrace))
         {
             // Retrieve macro name.
-            const auto rule_label = consume_identifier("Expected rule label of type identifier, found: '" + current.lexeme + "'.");
+            const auto rule_label = consume_identifier("Expected rule label of type identifier");
 
             auto& rule        = profile.create_rule(rule_label);
             profile.last_rule = rule_label;
@@ -214,8 +229,7 @@ class MactenParser final : public cpp20scanner::BaseParser<MactenTokenScanner, M
             // Parse proc macro rules.
             do
             {
-                consume(Token::LBrace,
-                        "Expected '{' after rule label name, found: '" + current.lexeme + "'.");
+                consume(Token::LBrace, "Expected '{' after rule label name");
 
                 int8_t                   scope{1};
                 std::vector<std::string> entry{};
@@ -223,15 +237,18 @@ class MactenParser final : public cpp20scanner::BaseParser<MactenTokenScanner, M
                 {
                     switch (current.type)
                     {
-                        break; case Token::RBrace:
+                        break;
+                        case Token::RBrace:
                         {
                             scope--;
                         }
-                        break; case Token::LBrace:
+                        break;
+                        case Token::LBrace:
                         {
                             scope++;
                         }
-                        break; default:
+                        break;
+                        default:
                         {
                             // do nothing...
                         }
