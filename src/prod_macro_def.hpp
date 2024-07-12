@@ -76,31 +76,33 @@ struct ProceduralMacroProfile
    return this->rules[rule_name];
   }
 
-  auto dump_parse(CodeEmitter& emitter, const std::string& rule_name) -> void
+  auto dump_parse(CodeEmitter& emitter, const std::string& rule_name) const -> void
   {
     emitter.writeln("@staticmethod");
     TEMP emitter.begin_indent("def parse(input: ListStream, ast: Any):");
     emitter.writeln("return parse_fn(macten.ctx, \"" + rule_name + "\")(input, ast)");
   }
 
-  auto dump_add_rules(CodeEmitter& emitter) -> void
+  auto dump_add_rules(CodeEmitter& emitter) const -> void
   {
     emitter.section("Rule Adder");
     TEMP emitter.begin_indent("def add_rules():");
     for (const auto& [_rule_name, rule] : this->rules)
     {
      const auto& [rule_definition, recursive] = rule;
-     const auto get_name = [&](const std::string& _name) { return this->name + "_" + _name; };
+     const auto get_name = [&](const std::string& _name) { return this->name + '_' + _name; };
      const auto _name = get_name(_rule_name);
      emitter.writeln("macten.ctx.add_rule(\"" + _name + "\", " + _name + ")");
     }
+    const auto entry_rule = this->name + '_' + last_rule;
+    emitter.writeln("macten.ctx.add_rule(\"" + this->name + "\", " + entry_rule + ")");
     emitter.newln();
   }
   
   /**
    * Dump python code for generating the rules.
    */
-  auto dump_rules(CodeEmitter& emitter) -> void 
+  auto dump_rules(CodeEmitter& emitter) const -> void 
   {
     for (const auto& [_rule_name, rule] : this->rules)
     {
@@ -329,9 +331,16 @@ struct ProceduralMacroProfile
   /**
    * Dump python code which generates the procedural macro profile.
    */
-  auto dump() -> const std::string 
+  auto dump() const -> const std::string 
   {
     macten::CodeEmitter emitter{};
+
+    emitter.comment("AUTO GENERATED CODE, DO NOT EDIT");
+    emitter.section("Imports");
+    emitter.writeln("import macten");
+    emitter.writeln("from macten import ListStream, ProceduralMacroContext, ident, number, parse_fn, NodeUtils");
+    emitter.writeln("from typing import Any");
+    emitter.writeln("from dataclasses import dataclass");
 
     // Begin profile section.
     emitter.section("Profile: " + this->name);

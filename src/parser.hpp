@@ -1,11 +1,13 @@
 #ifndef MACTEN_PASER_HPP
 #define MACTEN_PASER_HPP
 
+#include <filesystem>
 #include <fstream>
 #include <sstream>
 
 #include "macten_all_tokens.hpp"
 #include "macten_tokens.hpp"
+#include "prod_macro_def.hpp"
 #include "prod_macro_writer.hpp"
 #include "token_stream.hpp"
 
@@ -303,10 +305,43 @@ class MactenParser final : public cpp20scanner::BaseParser<MactenTokenScanner, M
 
         if (build)
         {
-            std::ofstream parser_file;
-            parser_file.open(".macten/"+macro_name+"_parser.py");
-            parser_file << profile.dump();
-            parser_file.close();
+            build_procedural_macro_files(profile);
+        }
+    }
+
+    auto build_procedural_macro_files(const macten::ProceduralMacroProfile& profile) -> void
+    {
+        const auto& macro_name = profile.name;
+
+        std::ofstream parser_file;
+        parser_file.open(".macten/"+macro_name+"_parser.py");
+        parser_file << profile.dump();
+        parser_file.close();
+
+        const auto handler_file_path = ".macten/"+macro_name+"_handler.py";
+        if (!std::filesystem::exists(handler_file_path))
+        {
+            macten::CodeEmitter emitter{};
+
+            emitter.comment("USER IMPLEMENTATION - " + macro_name + " HANDLER");
+            emitter.section("Imports");
+            emitter.writeln("import macten");
+            emitter.section("Register Handler");
+            {
+                const auto scope = emitter.begin_indent("def add_handler():");
+                emitter.writeln("macten.handler.add(\"" + macro_name + "\", handle)");
+            }
+            emitter.section("Handler Function");
+            {
+                const auto scope = emitter.begin_indent("def handle(ast):");
+                emitter.comment("TODO: Implementation of \"" + macro_name + "\" handler");
+                emitter.writeln("macten.NodeUtils.print(ast)");
+            }
+
+            std::ofstream handler_file{};
+            handler_file.open(handler_file_path);
+            handler_file << emitter.dump();
+            handler_file.close();
         }
     }
 

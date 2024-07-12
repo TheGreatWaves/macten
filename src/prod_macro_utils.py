@@ -85,6 +85,19 @@ class ProceduralMacroContext:
     def get_rule(self, name):
         return self.rules[name]
 
+class ASTHandler:
+    def __init__(self):
+        self.handler = dict()
+
+    def add(self, name, handler):
+        self.handler[name] = handler
+
+    def get(self, name):
+        if name in self.handler:
+            return self.handler[name]
+        else:
+            print(f'[ Error: handler for "{name}" not found. ]')
+            return NodeUtils.print
 
 @dataclass
 class ident:
@@ -218,8 +231,6 @@ class NodeUtils:
             NodeUtils._node_print(node._value)
         print()
 
-
-
     @staticmethod
     def _node_print(node, prefix=""):
         if isinstance(node, str):
@@ -260,3 +271,6 @@ def parse_fn(ctx, name):
 def init():
     global ctx
     ctx = ProceduralMacroContext()
+
+    global handler
+    handler = ASTHandler()

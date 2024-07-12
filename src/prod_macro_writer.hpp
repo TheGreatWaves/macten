@@ -32,13 +32,6 @@ struct CodeEmitter
 {
   explicit CodeEmitter() 
   {
-   this->comment("AUTO GENERATED CODE, DO NOT EDIT");
-
-   this->section("Imports");
-   this->writeln("import macten");
-   this->writeln("from macten import ListStream, ProceduralMacroContext, ident, number, parse_fn, NodeUtils");
-   this->writeln("from typing import Any");
-   this->writeln("from dataclasses import dataclass");
   }
 
   /**
