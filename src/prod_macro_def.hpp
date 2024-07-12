@@ -301,7 +301,7 @@ struct ProceduralMacroProfile
   auto dump_driver(CodeEmitter& emitter) -> void
   {
     emitter.section("Driver");
-    emitter.writeln("input = ListStream(\"\"\" \"\"\")");
+    emitter.writeln("input = ListStream.from_string(\"\"\" \"\"\")");
     emitter.writeln("ast = None");
     {
       TEMP emitter.begin_indent("while input and not input.empty():");

@@ -1,13 +1,12 @@
-defmacten_dec list {
-    () => {
-        (l := list(),
-         l.append(1),
-         l.append(2),
-         l.append(3),
-         l
-        )[-1]
-    }
+defmacten_dec assignment {
+  ($varname := $value $($vname := $lol)) => {assignment![$varname := $value] assignment![$lol]}
+  ($varname := $value) => {
+    auto $varname = $value;
+  }
 }
 
-if __name__ == "__main__":
-    print(list![])
+assignment![
+  foo := 5 
+  bar := 5 
+  lol := ('hi')
+ ]

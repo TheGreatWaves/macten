@@ -2,7 +2,7 @@
 @_preview FILE:
 	nvim --cmd 'set noswapfile | set autoread | au CursorHold * checktime | call feedkeys("lh" )' {{FILE}} 
 
-@view SOURCE="../examples/python/basic_declarative_macro.py" OUTPUT="throw.py":
+@view SOURCE="../examples/cpp/switch_throw.cpp" OUTPUT="throw.py":
 	zellij action new-tab -n="live preview"
 	zellij run -n="watcher" -d=right -- just _preview {{OUTPUT}}	
 	zellij action move-focus left
