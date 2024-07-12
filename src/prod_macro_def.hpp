@@ -80,7 +80,21 @@ struct ProceduralMacroProfile
   {
     emitter.writeln("@staticmethod");
     TEMP emitter.begin_indent("def parse(input: ListStream, ast: Any):");
-    emitter.writeln("return parse_fn(ctx, \"" + rule_name + "\")(input, ast)");
+    emitter.writeln("return parse_fn(macten.ctx, \"" + rule_name + "\")(input, ast)");
+  }
+
+  auto dump_add_rules(CodeEmitter& emitter) -> void
+  {
+    emitter.section("Rule Adder");
+    TEMP emitter.begin_indent("def add_rules():");
+    for (const auto& [_rule_name, rule] : this->rules)
+    {
+     const auto& [rule_definition, recursive] = rule;
+     const auto get_name = [&](const std::string& _name) { return this->name + "_" + _name; };
+     const auto _name = get_name(_rule_name);
+     emitter.writeln("macten.ctx.add_rule(\"" + _name + "\", " + _name + ")");
+    }
+    emitter.newln();
   }
   
   /**
@@ -293,8 +307,6 @@ struct ProceduralMacroProfile
        }
      }
      emitter.newln();
-     emitter.writeln("ctx.add_rule(\"" + _name + "\", " + _name + ")");
-     emitter.newln();
     }
   }
 
@@ -326,8 +338,7 @@ struct ProceduralMacroProfile
 
     dump_rules(emitter);
 
-    // TODO: Use this somewhere else.
-    // dump_driver(emitter);
+    dump_add_rules(emitter);
 
     // For debugging. (Target a file later)
     return emitter.dump();

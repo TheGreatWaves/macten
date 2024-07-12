@@ -1,4 +1,3 @@
-#include <filesystem>
 #include <fstream>
 
 #define DEFUG
@@ -18,16 +17,16 @@ auto handle_generate(const std::vector<std::string>& command) -> void
   std::cout << "Procedural macro files generated" << '\n';
 }
 
+auto handle_clean() -> void
+{
+ std::filesystem::remove_all(".macten");
+ std::cout << "Removed macten files" << '\n';
+}
+
 auto handle_run(const std::vector<std::string>& command) -> void
 {
  macten::MactenWriter writer("../examples/cpp/switch_throw.cpp", "throwaway.txt");
  writer.process();
-}
-
-auto handle_clean() -> void
-{
- std::filesystem::remove_all(".macten");
- std::cout << "Cleaned up parser files" << '\n';
 }
 
 auto main(int argc, char* argv[]) -> int 

@@ -257,3 +257,6 @@ def parse_fn(ctx, name):
         return t_input, result_ast
     return parse
 
+def init():
+    global ctx
+    ctx = ProceduralMacroContext()

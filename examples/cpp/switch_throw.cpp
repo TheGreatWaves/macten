@@ -6,3 +6,10 @@ defmacten_proc switch {
   target { ident }
   switch_str { switch target { branches } }
 }
+
+defmacten_proc declaration {
+ typename { ident }
+ varname { ident }
+ declaration { varname: typename; }
+}
+

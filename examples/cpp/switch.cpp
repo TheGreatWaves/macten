@@ -8,6 +8,13 @@ defmacten_proc switch {
  target { target_ident } | { target_string }
  match { switch target { branches } }
 }
+
+defmacten_proc declaration {
+ typename { ident }
+ varname { ident }
+ declaration { varname: typename; }
+}
+
 //
 // Source code.
 //

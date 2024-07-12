@@ -6,6 +6,7 @@
 
 #include "macten_all_tokens.hpp"
 #include "macten_tokens.hpp"
+#include "prod_macro_writer.hpp"
 #include "token_stream.hpp"
 
 
@@ -33,16 +34,22 @@ class MactenParser final : public cpp20scanner::BaseParser<MactenTokenScanner, M
     {
         advance();
 
+        bool has_procedural {false};
+
         while (!check(Token::EndOfFile))
         {
             if (match(Token::ProceduralDefinition))
             {
-                std::filesystem::create_directory(".macten");
+                if (!has_procedural)
+                {
+                    std::filesystem::create_directory(".macten");
 
-                if (!std::filesystem::exists(".macten/prod_macro_utils.py"))
-                    generate_parser_utils();
+                    if (!std::filesystem::exists(".macten/macten.py"))
+                        generate_parser_utils();
+                }
+                has_procedural = true;
 
-                procedural_definition();
+                procedural_definition(true);
             }
             else
                 advance();
@@ -229,9 +236,8 @@ class MactenParser final : public cpp20scanner::BaseParser<MactenTokenScanner, M
                               std::move(branch_parameters));
     }
 
-    auto procedural_definition() -> void
+    auto procedural_definition(bool build = false) -> void
     {
-
         // New procedural macro profile.
         macten::ProceduralMacroProfile profile{};
 
@@ -295,16 +301,20 @@ class MactenParser final : public cpp20scanner::BaseParser<MactenTokenScanner, M
             } while (match(Token::Pipe));
         }
 
-        std::ofstream parser_file;
-        parser_file.open(".macten/"+macro_name+"_parser.py");
-        parser_file << profile.dump();
-        parser_file.close();
+        if (build)
+        {
+            std::ofstream parser_file;
+            parser_file.open(".macten/"+macro_name+"_parser.py");
+            parser_file << profile.dump();
+            parser_file.close();
+        }
     }
 
     auto generate_parser_utils() -> void
     {
-        std::filesystem::copy("prod_macro_utils.py", ".macten/prod_macro_utils.py");
+        std::filesystem::copy("prod_macro_utils.py", ".macten/macten.py");
     }
+
 
     /**
      * Parse declartions.
@@ -317,11 +327,6 @@ class MactenParser final : public cpp20scanner::BaseParser<MactenTokenScanner, M
         }
         else if (match(Token::ProceduralDefinition))
         {
-            std::filesystem::create_directory(".macten");
-
-            if (!std::filesystem::exists(".macten/prod_macro_utils.py"))
-                generate_parser_utils();
-
             procedural_definition();
         }
         else
