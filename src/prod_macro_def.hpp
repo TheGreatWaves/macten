@@ -317,7 +317,7 @@ struct ProceduralMacroProfile
   /**
    * Dump python code which generates the procedural macro profile.
    */
-  auto dump() -> void 
+  auto dump() -> const std::string 
   {
     macten::CodeEmitter emitter{};
 
@@ -326,10 +326,11 @@ struct ProceduralMacroProfile
 
     dump_rules(emitter);
 
-    dump_driver(emitter);
+    // TODO: Use this somewhere else.
+    // dump_driver(emitter);
 
     // For debugging. (Target a file later)
-    emitter.dump();
+    return emitter.dump();
   }
 
   /**

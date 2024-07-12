@@ -3,7 +3,6 @@ from typing import List, Any
 from numbers import Number
 
 
-
 @dataclass
 class ListStream:
     lst: List[str]
@@ -117,6 +116,7 @@ class number:
     def out(self):
         return self._value
 
+
 @dataclass
 class Node:
     name: str
@@ -137,6 +137,7 @@ class Node:
 
     def get_child(self, name):
         return self._value.get(name)
+
 
 # Collection of node utility functions
 class NodeUtils:
@@ -189,6 +190,7 @@ class NodeUtils:
             current = current._value.get(node_name)
 
         return result
+
 
 
     @staticmethod

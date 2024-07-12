@@ -124,9 +124,9 @@ struct CodeEmitter
   /**
    * Dump generated code. Outputs to cout if target is not specified.
    */
-  inline auto dump(std::ostream& os = std::cout) -> void
+  inline auto dump(std::ostream& os = std::cout) -> const std::string
   {
-   os << this->code.str();
+   return this->code.str();
   }
 
   /**

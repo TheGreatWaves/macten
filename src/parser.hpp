@@ -1,11 +1,13 @@
 #ifndef MACTEN_PASER_HPP
 #define MACTEN_PASER_HPP
 
+#include <fstream>
 #include <sstream>
 
 #include "macten_all_tokens.hpp"
 #include "macten_tokens.hpp"
 #include "token_stream.hpp"
+
 
 class MactenParser final : public cpp20scanner::BaseParser<MactenTokenScanner, MactenToken>
 {
@@ -26,6 +28,28 @@ class MactenParser final : public cpp20scanner::BaseParser<MactenTokenScanner, M
      * Default Ctor prohibted.
      */
     constexpr MactenParser() = delete;
+
+    [[nodiscard]] auto generate_procedural() noexcept -> bool
+    {
+        advance();
+
+        while (!check(Token::EndOfFile))
+        {
+            if (match(Token::ProceduralDefinition))
+            {
+                std::filesystem::create_directory(".macten");
+
+                if (!std::filesystem::exists(".macten/prod_macro_utils.py"))
+                    generate_parser_utils();
+
+                procedural_definition();
+            }
+            else
+                advance();
+        }
+
+        return this->has_error;
+    }
 
     /**
      * Main Macten parse loop.
@@ -207,6 +231,7 @@ class MactenParser final : public cpp20scanner::BaseParser<MactenTokenScanner, M
 
     auto procedural_definition() -> void
     {
+
         // New procedural macro profile.
         macten::ProceduralMacroProfile profile{};
 
@@ -270,8 +295,17 @@ class MactenParser final : public cpp20scanner::BaseParser<MactenTokenScanner, M
             } while (match(Token::Pipe));
         }
 
-        profile.dump();
+        std::ofstream parser_file;
+        parser_file.open(".macten/"+macro_name+"_parser.py");
+        parser_file << profile.dump();
+        parser_file.close();
     }
+
+    auto generate_parser_utils() -> void
+    {
+        std::filesystem::copy("prod_macro_utils.py", ".macten/prod_macro_utils.py");
+    }
+
     /**
      * Parse declartions.
      */
@@ -283,6 +317,11 @@ class MactenParser final : public cpp20scanner::BaseParser<MactenTokenScanner, M
         }
         else if (match(Token::ProceduralDefinition))
         {
+            std::filesystem::create_directory(".macten");
+
+            if (!std::filesystem::exists(".macten/prod_macro_utils.py"))
+                generate_parser_utils();
+
             procedural_definition();
         }
         else

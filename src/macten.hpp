@@ -7,6 +7,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <vector>
+#include <filesystem>
 
 #include "macten_all_tokens.hpp"
 #include "macten_tokens.hpp"
@@ -394,6 +395,12 @@ class MactenWriter
         return processed_tokens;
     }
 
+    [[nodiscard]] auto generate() -> bool
+    {
+        MactenParser parser(m_source_path);
+        return parser.generate_procedural();
+    }
+
     /**
      * Tokenize. Substitute. Rebuild.
      * NOTE: At the moment, this requires two passes. This can be addressed later.
@@ -424,7 +431,7 @@ class MactenWriter
         const auto res                = apply_macro_rules(result_tokens, source_tokens_view);
 
         // std::cout << "Result\n======================================================\n";
-        std::cout << result_tokens.construct();
+        // std::cout << result_tokens.construct();
         // std::cout << "\n======================================================\n";
 
         return res;
