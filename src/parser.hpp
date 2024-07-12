@@ -1,8 +1,10 @@
 #ifndef MACTEN_PASER_HPP
 #define MACTEN_PASER_HPP
 
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <sstream>
 
 #include "macten_all_tokens.hpp"
@@ -57,7 +59,58 @@ class MactenParser final : public cpp20scanner::BaseParser<MactenTokenScanner, M
                 advance();
         }
 
+        if (has_procedural)
+        {
+            generate_driver();
+        }
+
         return this->has_error;
+    }
+
+    auto generate_driver() -> void
+    {
+        std::vector<std::pair<std::string, std::string>> macro_files;
+        std::transform(m_prod_macros.begin(), 
+                       m_prod_macros.end(), 
+                       std::back_inserter(macro_files), 
+                       [](const std::string& macro){ return std::make_pair(macro+"_parser", macro+"_handler"); });
+        macten::CodeEmitter emitter{};
+        emitter.comment("AUTO GENERATED CODE, DO NOT EDIT");
+        emitter.section("Imports");
+        emitter.writeln("import macten");
+        emitter.writeln("import sys");
+        emitter.writeln("from pathlib import Path");
+        for (const auto& [parser, handler] : macro_files)
+        {
+            emitter.writeln("import " + parser);
+            emitter.writeln("import " + handler);
+        }
+        emitter.section("Setup");
+        emitter.writeln("macten.init()");
+        for (const auto& [parser, handler] : macro_files)
+        {
+            emitter.writeln(parser+".add_rules()");
+            emitter.writeln(handler+".add_handler()");
+        }
+        emitter.section("Execution");
+        emitter.writeln("rule=sys.argv[1]");
+        emitter.writeln("file=sys.argv[2]");
+        emitter.writeln("source=Path(file).read_text()");
+        emitter.writeln("input=macten.ListStream.from_string(source)");
+        emitter.writeln("ast=None");
+        const auto scope = emitter.begin_indent("while input and not input.empty():");
+        emitter.writeln("input,ast=macten.ctx.get_rule(rule).parse(input,ast)");
+        {
+            const auto scope = emitter.begin_indent("if ast is None:");
+            emitter.writeln("print(f\"Failed to parse '{file}' using '{rule}' parser rules\")");
+            emitter.writeln("break");
+        }
+        emitter.writeln("macten.handler.get(rule)(ast)");
+
+        std::ofstream driver_file{};
+        driver_file.open(".macten/driver.py");
+        driver_file << emitter.dump();
+        driver_file.close();
     }
 
     /**
