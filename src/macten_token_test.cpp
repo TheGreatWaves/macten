@@ -4,6 +4,6 @@
 
 auto main() -> int 
 {
- MactenWriter writer("../examples/cpp/switch.cpp", "throwaway.txt");
+ macten::MactenWriter writer("../examples/cpp/switch_throw.cpp", "throwaway.txt");
  writer.process();
 }
