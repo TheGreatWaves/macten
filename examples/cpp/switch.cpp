@@ -1,33 +1,25 @@
 defmacten_proc switch {
- case_name { ident }
- body { ident }
- branch { case "case_name" { body } }
- branches { branches branch } | { branch }
- target_string { ident }
- target_ident { "target_string" }
- target { target_ident } | { target_string }
- match { switch target { branches } }
+  case_name { ident }
+  body { ident }
+  branch { case "case_name": { body } }
+  branches { branches branch } | { branch }
+  target { ident }
+  switch_str { switch target { branches } }
 }
 
-defmacten_proc declaration {
- typename { ident }
- varname { ident }
- declaration { varname: typename; }
-}
-
-//
-// Source code.
-//
 #include <iostream>
+#define TREE std::cout << "GOT TREE\n";
+#define TREAD std::cout << "GOT TREAD\n";
 
-
-auto main() -> int
+int main()
 {
+ const std::string name = "tread";
  switch![
-  switch (name)
-  {
-   case "Mai": { stmt1 }
-   case "Dan": { stmt2 }
-  }
+ switch name
+ {
+     case "tree": { TREE }
+     case "tread": { TREAD }
+ }
  ]
 }
+
