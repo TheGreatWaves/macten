@@ -17,11 +17,19 @@ defmacten_dec foo {
  () => {hello}
 }
 
+#include <iostream>
+#define TREE std::cout << "GOT TREE\n";
+#define TREAD std::cout << "GOT TREAD\n";
 
-switch![
-switch name
+int main()
 {
-    case "tree": { over }
-    case "tread": { jam_over }
+ const auto name = "tread";
+ switch![
+ switch name
+ {
+     case "tree": { TREE }
+     case "tread": { TREAD }
+ }
+ ]
 }
-]
+

@@ -235,7 +235,7 @@ class MactenWriter
                 }
                 else if (has_procedural_macro(token.lexeme))
                 {
-                    if (!handle_procedural_macro_call(token.lexeme, source_view)) 
+                    if (!handle_procedural_macro_call(target, token.lexeme, source_view)) 
                     {
                         return false;
                     }
@@ -253,7 +253,10 @@ class MactenWriter
         return true;
     }
 
-    auto handle_procedural_macro_call(const std::string& macro_name, macten::TokenStream<MactenAllToken>::TokenStreamView& source_view) -> bool
+    auto handle_procedural_macro_call(
+                                      macten::TokenStream<MactenAllToken>& target,
+                                      const std::string& macro_name, 
+                                      macten::TokenStream<MactenAllToken>::TokenStreamView& source_view) -> bool
     {
         // Capture argument body [arg].
         source_view.skip_until(TType::LSquare);
@@ -281,6 +284,15 @@ class MactenWriter
            execl(executable, executable, ".macten/driver.py", macro_name.c_str(), ".macten/tmp.in",  NULL);
         }
 
+        const auto result_stream = macten::TokenStream<MactenAllToken>::from_file(".macten/tmp.in.out");
+        auto view = result_stream.get_view();
+
+        while (!view.is_at_end())
+        {
+            const auto token = view.pop();
+            target.push_back(token);
+        }
+
         return true;
     }
 
@@ -294,8 +306,7 @@ class MactenWriter
 
         do
         {
-            const auto token_stream =
-                macten::TokenStream<MactenToken>::from_string(all_token_stream_view.construct());
+            const auto token_stream = macten::TokenStream<MactenToken>::from_string(all_token_stream_view.construct());
             auto token_stream_view = token_stream.get_view();
 
             // Find match.
@@ -305,7 +316,7 @@ class MactenWriter
                 return false;
             }
 
-            auto args_mapping = macro_rule.map_args(idx, all_token_stream_view);
+            const auto args_mapping = macro_rule.map_args(idx, all_token_stream_view);
 
             if (!args_mapping.has_value())
             {
@@ -316,7 +327,7 @@ class MactenWriter
             bool success = macro_rule.apply(this, idx, target, args_mapping.value());
             if (!success)
             {
-                std::cerr << "Something went really wrong...\n";
+                std::cerr << "Failed to apply macro: '" << macro_name << "'\n";
                 return false;
             }
 
