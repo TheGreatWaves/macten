@@ -5,12 +5,20 @@
 
 auto print_help() -> void
 {
- std::cout << "Usage: help | generate | run | clean" << '\n';
+ std::cout << "Usage: help | generate <path> | run <path> | clean" << '\n';
 }
 
 auto handle_generate(const std::vector<std::string>& command) -> void
 {
- macten::MactenWriter writer("../examples/cpp/switch_throw.cpp", "throwaway.txt");
+ if (command.size() < 2)
+ {
+  std::cerr << "Expected source path" << '\n';
+  return;
+ }
+ 
+ const auto file = command[1];
+
+ macten::MactenWriter writer(file, "throwaway.txt");
  if (writer.generate())
   std::cerr << "Failed to generate procedural macro files" << '\n';
  else
@@ -25,7 +33,15 @@ auto handle_clean() -> void
 
 auto handle_run(const std::vector<std::string>& command) -> void
 {
- macten::MactenWriter writer("../examples/cpp/switch_throw.cpp", "throwaway.txt");
+ if (command.size() < 2)
+ {
+  std::cerr << "Expected source path" << '\n';
+  return;
+ }
+ 
+ const auto file = command[1];
+
+ macten::MactenWriter writer(file, "throwaway.txt");
  if (writer.process())
   std::cout << "Successfully processed macros" << '\n';
  else
