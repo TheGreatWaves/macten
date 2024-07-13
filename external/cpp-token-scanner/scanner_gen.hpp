@@ -1240,8 +1240,12 @@ TOKEN(Identifier)
             return make_token(TOKEN_CLASS_NAME::EndOfFile);
 
         const auto c = advance();
-        while (peek()!=' ' && !is_at_end()) advance_position();
-        return make_token(TOKEN_CLASS_NAME::Identifier);
+
+        if (c==' ' || c=='\n') 
+            return make_token(TOKEN_CLASS_NAME::Raw);
+        
+        while (peek()!=' ' && peek()!='\n' && !is_at_end()) advance_position();
+        return make_token(TOKEN_CLASS_NAME::Raw);
     }
 
     /**

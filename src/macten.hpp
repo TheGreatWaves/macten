@@ -193,6 +193,8 @@ class MactenWriter
         -> bool
 
     {
+        std::vector<TType> prefix_buffer{};
+
         while (!source_view.peek().is(MactenAllToken::EndOfFile))
         {
             auto token = source_view.peek();
@@ -218,6 +220,11 @@ class MactenWriter
 
             if (macro_call_found)
             {
+                std::stringstream indent_ss{};
+                for (const auto& prefix : prefix_buffer)
+                    indent_ss << prefix.get_symbol();
+                const std::string indent = indent_ss.str();
+
                 if (has_declarative_macro(token.lexeme)) 
                 {
                     // Move onto the '['.
@@ -235,7 +242,7 @@ class MactenWriter
                 }
                 else if (has_procedural_macro(token.lexeme))
                 {
-                    if (!handle_procedural_macro_call(target, token.lexeme, source_view)) 
+                    if (!handle_procedural_macro_call(target, token.lexeme, source_view, indent)) 
                     {
                         return false;
                     }
@@ -243,6 +250,11 @@ class MactenWriter
             }
             else
             {
+                if (token.type == TType::Newline)
+                    prefix_buffer.clear();
+                else
+                    prefix_buffer.push_back(token.type);
+
                 // Default. Just push the token, no need to care.
                 target.push_back(token);
             }
@@ -250,13 +262,15 @@ class MactenWriter
             source_view.advance();
         }
 
+
         return true;
     }
 
     auto handle_procedural_macro_call(
                                       macten::TokenStream<MactenAllToken>& target,
                                       const std::string& macro_name, 
-                                      macten::TokenStream<MactenAllToken>::TokenStreamView& source_view) -> bool
+                                      macten::TokenStream<MactenAllToken>::TokenStreamView& source_view,
+                                      const std::string& indent) -> bool
     {
         // Capture argument body [arg].
         source_view.skip_until(TType::LSquare);
@@ -291,6 +305,10 @@ class MactenWriter
         {
             const auto token = view.pop();
             target.push_back(token);
+            if (token.lexeme.ends_with('\n'))
+            {
+                target.add_string(indent);
+            }
         }
 
         return true;
