@@ -158,10 +158,6 @@ class MactenWriter
                               m_declarative_macro_rules[macro_detail.m_name] =
                                   macro_detail.construct_template();
                           });
-
-            std::for_each(parser.m_prod_macros.begin(), parser.m_prod_macros.end(),
-                          [this](const auto& prod_macro_name)
-                          { m_procedural_macro_rules.insert(prod_macro_name); });
         }
         return res;
     }
@@ -180,6 +176,7 @@ class MactenWriter
     auto apply_macro_rules(macten::TokenStream<MactenAllToken>&                  target,
                            macten::TokenStream<MactenAllToken>::TokenStreamView& source_view)
         -> bool
+
     {
         while (!source_view.peek().is(MactenAllToken::EndOfFile))
         {
@@ -203,6 +200,9 @@ class MactenWriter
             }
 
             const bool macro_call_found = macten::utils::is_macro_call(source_view);
+            if (macro_call_found)
+                std::cout << "FOUND A MACRO CALL!\n";
+
 
             if (macro_call_found && has_macro(token.lexeme))
             {
@@ -415,24 +415,24 @@ class MactenWriter
         macten::TokenStream<MactenAllToken> result_tokens;
         auto source_tokens = macten::TokenStream<MactenAllToken>::from_file(m_source_path);
 
-        // std::cout << "Raw \n======================================================\n";
-        // std::cout << source_tokens.construct();
-        // std::cout << "\n======================================================\n";
+        std::cout << "Raw \n======================================================\n";
+        std::cout << source_tokens.construct();
+        std::cout << "\n======================================================\n";
 
         source_tokens = preprocess(source_tokens);
 
-        // std::cout << "After
-        // preprocess\n======================================================\n"; std::cout <<
-        // source_tokens.construct(); std::cout <<
-        // "\n======================================================\n";
+        std::cout << "After preprocess\n======================================================\n"; 
+        std::cout << source_tokens.construct(); 
+        std::cout << "\n======================================================\n";
+
 
         // Note: It's important that we get the view AFTER preprocess.
         auto       source_tokens_view = source_tokens.get_view();
         const auto res                = apply_macro_rules(result_tokens, source_tokens_view);
 
-        // std::cout << "Result\n======================================================\n";
-        // std::cout << result_tokens.construct();
-        // std::cout << "\n======================================================\n";
+        std::cout << "Result\n======================================================\n";
+        std::cout << result_tokens.construct();
+        std::cout << "\n======================================================\n";
 
         return res;
     }

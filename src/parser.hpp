@@ -371,6 +371,7 @@ class MactenParser final : public cpp20scanner::BaseParser<MactenTokenScanner, M
         parser_file << profile.dump();
         parser_file.close();
 
+        // Don't create a new handler if there is an existing one.
         const auto handler_file_path = ".macten/"+macro_name+"_handler.py";
         if (!std::filesystem::exists(handler_file_path))
         {
@@ -415,7 +416,10 @@ class MactenParser final : public cpp20scanner::BaseParser<MactenTokenScanner, M
         }
         else if (match(Token::ProceduralDefinition))
         {
-            procedural_definition();
+            const auto macro_name = consume_identifier("Expected macro name");
+            m_prod_macros.push_back(macro_name);
+            consume(Token::LBrace, "Expected '{' after procedural macro name");
+            const auto _ = scanner.scan_body(MactenToken::LBrace, MactenToken::RBrace);
         }
         else
         {

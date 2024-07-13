@@ -13,3 +13,9 @@ defmacten_proc declaration {
  declaration { varname: typename; }
 }
 
+defmacten_dec foo {
+ () => {hello}
+}
+
+
+foo![]

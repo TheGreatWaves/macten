@@ -26,7 +26,11 @@ auto handle_clean() -> void
 auto handle_run(const std::vector<std::string>& command) -> void
 {
  macten::MactenWriter writer("../examples/cpp/switch_throw.cpp", "throwaway.txt");
- writer.process();
+ if (writer.process())
+  std::cout << "Successfully processed macros" << '\n';
+ else
+  std::cerr << "Failed to process macros" << '\n';
+
 }
 
 auto main(int argc, char* argv[]) -> int 
