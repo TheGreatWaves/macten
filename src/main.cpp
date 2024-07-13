@@ -1,3 +1,4 @@
+#include <filesystem>
 #include <fstream>
 
 #define DEFUG
@@ -18,7 +19,7 @@ auto handle_generate(const std::vector<std::string>& command) -> void
  
  const auto file = command[1];
 
- macten::MactenWriter writer(file, "throwaway.txt");
+ macten::MactenWriter writer(file, file+".error");
  if (writer.generate())
   std::cerr << "Failed to generate procedural macro files" << '\n';
  else
@@ -38,10 +39,28 @@ auto handle_run(const std::vector<std::string>& command) -> void
   std::cerr << "Expected source path" << '\n';
   return;
  }
- 
+
  const auto file = command[1];
 
- macten::MactenWriter writer(file, "throwaway.txt");
+ std::string dest = "";
+ if (command.size() < 3)
+ {
+  std::filesystem::path path(file);
+  std::stringstream path_ss{};
+  path_ss << path.parent_path().string();
+  path_ss << '/';
+  path_ss << path.stem().string();
+  path_ss << ".macten";
+  path_ss << path.extension().string();
+  dest = path_ss.str();
+ }
+ else
+ {
+  dest = command[2];
+ }
+
+
+ macten::MactenWriter writer(file, dest);
  if (writer.process())
   std::cout << "Successfully processed macros" << '\n';
  else

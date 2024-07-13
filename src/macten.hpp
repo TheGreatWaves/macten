@@ -496,24 +496,18 @@ class MactenWriter
         macten::TokenStream<MactenAllToken> result_tokens;
         auto source_tokens = macten::TokenStream<MactenAllToken>::from_file(m_source_path);
 
-        std::cout << "Raw \n======================================================\n";
-        std::cout << source_tokens.construct();
-        std::cout << "\n======================================================\n";
-
+        // Preprocess and remove definitions.
         source_tokens = preprocess(source_tokens);
-
-        std::cout << "After preprocess\n======================================================\n"; 
-        std::cout << source_tokens.construct(); 
-        std::cout << "\n======================================================\n";
-
 
         // Note: It's important that we get the view AFTER preprocess.
         auto       source_tokens_view = source_tokens.get_view();
         const auto res                = apply_macro_rules(result_tokens, source_tokens_view);
 
-        std::cout << "Result\n======================================================\n";
-        std::cout << result_tokens.construct();
-        std::cout << "\n======================================================\n";
+        // Write to output file
+        std::ofstream output_file;
+        output_file.open(m_output_name);
+        output_file << result_tokens.construct();
+        output_file.close();
 
         return res;
     }

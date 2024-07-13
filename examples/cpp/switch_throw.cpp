@@ -7,23 +7,13 @@ defmacten_proc switch {
   switch_str { switch target { branches } }
 }
 
-defmacten_proc declaration {
- typename { ident }
- varname { ident }
- declaration { varname: typename; }
-}
-
-defmacten_dec foo {
- () => {hello}
-}
-
 #include <iostream>
 #define TREE std::cout << "GOT TREE\n";
 #define TREAD std::cout << "GOT TREAD\n";
 
 int main()
 {
- const auto name = "tread";
+ const std::string name = "tread";
  switch![
  switch name
  {
@@ -31,9 +21,5 @@ int main()
      case "tread": { TREAD }
  }
  ]
-
- foo![]
-
- declaration![lol: int;]
 }
 
