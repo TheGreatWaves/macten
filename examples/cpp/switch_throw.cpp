@@ -18,4 +18,10 @@ defmacten_dec foo {
 }
 
 
-foo![]
+switch![
+switch name
+{
+    case "tree": { over }
+    case "tread": { jam_over }
+}
+]

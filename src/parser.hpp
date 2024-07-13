@@ -80,6 +80,7 @@ class MactenParser final : public cpp20scanner::BaseParser<MactenTokenScanner, M
         emitter.writeln("import macten");
         emitter.writeln("import sys");
         emitter.writeln("from pathlib import Path");
+        emitter.writeln("from contextlib import redirect_stdout");
         for (const auto& [parser, handler] : macro_files)
         {
             emitter.writeln("import " + parser);
@@ -98,15 +99,20 @@ class MactenParser final : public cpp20scanner::BaseParser<MactenTokenScanner, M
         emitter.writeln("source=Path(file).read_text()");
         emitter.writeln("input=macten.ListStream.from_string(source)");
         emitter.writeln("ast=None");
-        const auto scope = emitter.begin_indent("while input and not input.empty():");
-        emitter.writeln("input,ast=macten.ctx.get_rule(rule).parse(input,ast)");
+        const auto scope = emitter.begin_indent("with open('.macten/tmp.in.out','w') as f:");
         {
-            const auto scope = emitter.begin_indent("if ast is None:");
-            emitter.writeln("print(f\"Failed to parse '{file}' using '{rule}' parser rules\")");
-            emitter.writeln("break");
+            const auto scope = emitter.begin_indent("with redirect_stdout(f):");
+            {
+                const auto scope = emitter.begin_indent("while input and not input.empty():");
+                emitter.writeln("input,ast=macten.ctx.get_rule(rule).parse(input,ast)");
+                {
+                    const auto scope = emitter.begin_indent("if ast is None:");
+                    emitter.writeln("print(f\"Failed to parse '{file}' using '{rule}' parser rules\")");
+                    emitter.writeln("break");
+                }
+                emitter.writeln("macten.handler.get(rule)(ast)");
+            }
         }
-        emitter.writeln("macten.handler.get(rule)(ast)");
-
         std::ofstream driver_file{};
         driver_file.open(".macten/driver.py");
         driver_file << emitter.dump();
@@ -151,7 +157,6 @@ class MactenParser final : public cpp20scanner::BaseParser<MactenTokenScanner, M
         if (match(Token::Dollar))
         {
             macro_tokens.push_back(previous.type);
-
             const auto arg_name = consume_identifier("Expected argument name");
             macro_args.push_back(arg_name);
         }

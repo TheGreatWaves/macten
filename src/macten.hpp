@@ -8,6 +8,8 @@
 #include <unordered_set>
 #include <vector>
 #include <filesystem>
+#include <unistd.h>
+#include <sys/wait.h>
 
 #include "macten_all_tokens.hpp"
 #include "macten_tokens.hpp"
@@ -158,16 +160,29 @@ class MactenWriter
                               m_declarative_macro_rules[macro_detail.m_name] =
                                   macro_detail.construct_template();
                           });
+            std::for_each(parser.m_prod_macros.begin(), parser.m_prod_macros.end(),
+                          [this](const auto& prod_macro_name) {
+                              m_procedural_macro_rules.insert(prod_macro_name);
+                          });
         }
         return res;
     }
 
     /**
-     * Checks wheter the macro with the given name exists.
+     * Checks wheter the macro with the given name exists as a declarative macro.
      */
-    auto has_macro(const std::string& name) -> bool
+    auto has_declarative_macro(const std::string& name) -> bool
     {
         return m_declarative_macro_rules.contains(name);
+    }
+
+
+    /**
+     * Checks wheter the macro with the given name exists as a procedural macro.
+     */
+    auto has_procedural_macro(const std::string& name) -> bool
+    {
+        return m_procedural_macro_rules.contains(name);
     }
 
     /**
@@ -200,24 +215,30 @@ class MactenWriter
             }
 
             const bool macro_call_found = macten::utils::is_macro_call(source_view);
+
             if (macro_call_found)
-                std::cout << "FOUND A MACRO CALL!\n";
-
-
-            if (macro_call_found && has_macro(token.lexeme))
             {
-                // Move onto the '['.
-                source_view.skip_until(TType::LSquare);
-                if (!source_view.consume(TType::LSquare))
-                    return false;
-
-                const auto args =
-                    source_view.between(MactenAllToken::LSquare, MactenAllToken::RSquare);
-                source_view.advance(args.remaining_size());
-
-                if (!match_and_execute_macro(target, token.lexeme, args.construct()))
+                if (has_declarative_macro(token.lexeme)) 
                 {
-                    return false;
+                    // Move onto the '['.
+                    source_view.skip_until(TType::LSquare);
+                    if (!source_view.consume(TType::LSquare))
+                        return false;
+
+                    const auto args = source_view.between(MactenAllToken::LSquare, MactenAllToken::RSquare);
+                    source_view.advance(args.remaining_size());
+
+                    if (!match_and_execute_macro(target, token.lexeme, args.construct()))
+                    {
+                        return false;
+                    }
+                }
+                else if (has_procedural_macro(token.lexeme))
+                {
+                    if (!handle_procedural_macro_call(token.lexeme, source_view)) 
+                    {
+                        return false;
+                    }
                 }
             }
             else
@@ -227,6 +248,37 @@ class MactenWriter
             }
 
             source_view.advance();
+        }
+
+        return true;
+    }
+
+    auto handle_procedural_macro_call(const std::string& macro_name, macten::TokenStream<MactenAllToken>::TokenStreamView& source_view) -> bool
+    {
+        // Capture argument body [arg].
+        source_view.skip_until(TType::LSquare);
+        if (!source_view.consume(TType::LSquare)) return false;
+        const auto args = source_view.between(MactenAllToken::LSquare, MactenAllToken::RSquare);
+        source_view.advance(args.remaining_size());
+
+        // Dump the arguments into a file.
+        std::ofstream tmp_file{};
+        tmp_file.open(".macten/tmp.in");
+        tmp_file << args.construct();
+        tmp_file.close();
+
+        // Set up fork & exec.
+        int pid, status;
+        if (pid = fork(); pid != 0)
+        {
+            // Wait for process to finish running.
+            waitpid(pid, &status, 0);
+        }
+        else
+        {
+            // Child process
+           const char executable[] = "/home/linuxbrew/.linuxbrew/bin/python3";
+           execl(executable, executable, ".macten/driver.py", macro_name.c_str(), ".macten/tmp.in",  NULL);
         }
 
         return true;

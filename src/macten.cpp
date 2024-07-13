@@ -51,7 +51,7 @@ auto macten::DeclarativeTemplate::apply(
        temp_buffer.push_back(_token);
      }
     }
-    else if (is_macro_call & env->has_macro(_token.lexeme))
+    else if (is_macro_call & env->has_declarative_macro(_token.lexeme))
     {
       auto arg_body = view.between(MactenAllToken::LSquare, MactenAllToken::RSquare, false);
       view.advance(arg_body.remaining_size()+3);
