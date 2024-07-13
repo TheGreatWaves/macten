@@ -1232,6 +1232,18 @@ TOKEN(Identifier)
              || c == ' ');
     }
 
+    [[nodiscard]] cpp20scanner::Token<TOKEN_CLASS_NAME> scan_raw() noexcept
+    {
+        skip_whitespace();
+        start = current;
+        if (is_at_end()) 
+            return make_token(TOKEN_CLASS_NAME::EndOfFile);
+
+        const auto c = advance();
+        while (peek()!=' ' && !is_at_end()) advance_position();
+        return make_token(TOKEN_CLASS_NAME::Identifier);
+    }
+
     /**
      * Return the next token.
      */

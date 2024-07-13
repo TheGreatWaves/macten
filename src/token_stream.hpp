@@ -398,6 +398,19 @@ struct TokenStream
   return ts;
  }
 
+ static auto from_file_raw(const std::string& path) -> TokenStream
+ {
+  TokenStream ts{};
+  Scanner scanner{};
+  if (!scanner.read_source(path)) return ts;
+  while (!scanner.is_at_end())
+  {
+    const auto token = scanner.scan_raw();
+    ts.push_back(token);
+  }
+  return ts;
+ }
+
  /**
   * Push the token to the back of the token stream.
   */

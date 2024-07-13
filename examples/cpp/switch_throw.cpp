@@ -31,5 +31,9 @@ int main()
      case "tread": { TREAD }
  }
  ]
+
+ foo![]
+
+ declaration![lol: int;]
 }
 

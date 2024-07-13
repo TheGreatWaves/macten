@@ -284,7 +284,7 @@ class MactenWriter
            execl(executable, executable, ".macten/driver.py", macro_name.c_str(), ".macten/tmp.in",  NULL);
         }
 
-        const auto result_stream = macten::TokenStream<MactenAllToken>::from_file(".macten/tmp.in.out");
+        const auto result_stream = macten::TokenStream<MactenAllToken>::from_file_raw(".macten/tmp.in.out");
         auto view = result_stream.get_view();
 
         while (!view.is_at_end())
@@ -324,7 +324,7 @@ class MactenWriter
                 return false;
             }
 
-            bool success = macro_rule.apply(this, idx, target, args_mapping.value());
+            const bool success = macro_rule.apply(this, idx, target, args_mapping.value());
             if (!success)
             {
                 std::cerr << "Failed to apply macro: '" << macro_name << "'\n";
